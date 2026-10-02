@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HomeFix</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Hind+Siliguri:wght@600;700&display=swap" rel="stylesheet">
+<style>
+
+:root{--bg:#F1ECE3;--ink:#2B3644;--muted:#6A6D70;--accent:#B25B35;--on-accent:#FFFFFF;--line:#2B3644;--card:#FAF7F1;--err:#B3261E;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171E27;--ink:#EDE8DF;--muted:#A3AAB3;--line:#EDE8DF;--card:#212A35;--err:#FF8A80;--accent:#E0804F;--on-accent:#171E27}}
+:root[data-theme="dark"]{--bg:#171E27;--ink:#EDE8DF;--muted:#A3AAB3;--line:#EDE8DF;--card:#212A35;--err:#FF8A80;--accent:#E0804F;--on-accent:#171E27}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:440px;padding:28px 24px 56px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.bolt{width:40px;height:40px;background:var(--accent);border-radius:11px;display:grid;place-items:center;flex:none}
+.bolt svg{width:22px;height:22px}
+.top b{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:24px;letter-spacing:.02em;display:block;line-height:1}
+.top small{color:var(--muted);font-size:14px}
+h1{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:44px;line-height:1;margin:0 0 24px}
+h2{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:26px;margin:0}
+.f{position:relative;padding-left:30px;margin-bottom:18px}
+.f::after{content:"";position:absolute;left:0;top:6px;width:19px;height:19px;border-radius:50%;background:var(--bg);border:3px solid var(--line)}
+.f.ok::after{background:var(--accent)}
+.cust .f::before{content:"";position:absolute;left:8px;top:30px;bottom:-22px;width:3px;background:var(--line);opacity:.85}
+.cust .f:last-child::before{display:none}
+label{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+input{width:100%;font:inherit;font-size:17px;min-height:52px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+input:focus-visible,.btn:focus-visible,.rm:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input.bad{border-color:var(--err)}
+.price{display:flex}
+.price span{min-height:52px;display:grid;place-items:center;padding:0 14px;font-weight:600;font-size:18px;background:var(--accent);color:var(--on-accent);border:2px solid var(--line);border-right:0;border-radius:12px 0 0 12px}
+.price input{border-radius:0 12px 12px 0}
+.hint{font-size:13px;color:var(--muted);margin-top:4px}
+.err{font-size:13px;color:var(--err);margin-top:4px}
+.bk{border:2px solid var(--line);border-radius:16px;padding:18px 16px 2px;margin:0 0 16px;background:color-mix(in srgb,var(--card) 60%,transparent)}
+.bk header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.rm{font:inherit;font-weight:600;font-size:14px;min-height:36px;padding:0 12px;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btn{width:100%;font:inherit;font-weight:700;font-size:20px;min-height:62px;border-radius:14px;border:2px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;margin-top:12px}
+.btn.ghost{background:transparent;color:var(--ink);border:2px dashed var(--line);font-size:18px;min-height:56px;margin-top:0}
+.btn:active{transform:translateY(1px)}
+.done{display:none}
+.done h1{margin-bottom:8px}
+.sum{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 18px;margin:16px 0}
+.sum div{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 20%,transparent)}
+.sum div:last-child{border:0}
+.sum span{color:var(--muted)}
+.sum b{text-align:right}
+.id{display:inline-block;background:var(--accent);color:var(--on-accent);font-weight:700;padding:4px 12px;border-radius:8px;margin-right:6px}
+
+[hidden]{display:none!important}
+select{width:100%;font:inherit;font-size:17px;min-height:52px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+select:focus-visible,.opt:focus-visible,.back:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.brand{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:64px;line-height:.9;margin:20px 0 0}
+.brand span{display:block;font-weight:700;font-size:26px;color:var(--muted);margin-top:8px}
+.bolt.big{width:44px;height:44px}
+.run{position:relative;margin-top:48px;display:flex;flex-direction:column;gap:16px;padding-left:34px}
+.run::before{content:"";position:absolute;left:9px;top:28px;bottom:28px;width:3px;background:var(--line);opacity:.85}
+.opt{position:relative;font:inherit;font-weight:600;font-size:18px;min-height:58px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left;padding:0 20px}
+.opt::before{content:"";position:absolute;left:-34px;top:50%;margin-top:-10px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:3px solid var(--line)}
+.opt.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-size:20px;min-height:66px}
+.opt.primary::before{background:var(--accent)}
+.opt:active{transform:translateY(1px)}
+.back{font:inherit;font-weight:600;font-size:16px;background:none;border:0;color:var(--ink);padding:0;min-height:44px;margin:-8px 0 8px;cursor:pointer}
+.msg{margin-top:14px;font-size:15px;color:var(--muted)}
+.msg.bad{color:var(--err)}
+
+
+.logo{display:flex;align-items:center;font-weight:800;letter-spacing:-.045em;line-height:1;color:var(--ink)}
+.logo .o{color:var(--accent)}
+.logo svg{width:.92em;height:.92em;margin-left:.06em;color:var(--ink);flex:none}
+.logo.big{font-size:clamp(44px,15vw,64px);margin-top:24px}
+.logo.sm{font-size:28px}
+.top{margin-bottom:24px}
+.top small{margin-left:auto;color:var(--muted);font-weight:600;font-size:13px}
+.tag{font-family:'Hind Siliguri',Montserrat,sans-serif;font-weight:700;font-size:21px;line-height:1.3;margin:14px 0 0}
+.sub{margin:4px 0 0;color:var(--muted);font-weight:600;font-size:14px}
+h1{font-size:34px;letter-spacing:-.025em;margin-bottom:22px}
+h2{font-size:19px;letter-spacing:-.01em}
+label{font-weight:600;font-size:14px}
+input,select{font-weight:500;font-size:16px}
+.opt{font-weight:700;font-size:17px}.opt.primary{font-size:19px}
+.btn{font-weight:700;font-size:18px}.btn.ghost{font-size:17px}
+.price span{font-weight:700}
+
+.tabs{display:flex;gap:8px;margin:0 0 16px}
+.tab{flex:1;font:inherit;font-weight:700;font-size:13px;min-height:44px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.tab[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.bc{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.rw{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.chip{font-weight:700;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--ink);color:var(--bg)}
+.chip.new{background:var(--accent);color:var(--on-accent)}
+.bc .nm{font-weight:700;font-size:17px;margin-top:10px}
+.bc p{margin:6px 0 0;font-size:14px;color:var(--muted)}
+.bc p.bl{color:var(--ink);font-weight:700}
+.bc a{color:var(--ink);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.sb{font:inherit;font-weight:700;font-size:14px;min-height:42px;padding:0 14px;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.sb.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.sb.del{color:var(--err);border-color:var(--err)}
+.sheet{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet form{width:100%;max-width:440px;max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border-radius:20px 20px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin-bottom:14px}.sf{margin-bottom:14px}
+.sheet .btn.ghost{margin-top:10px}
+
+.tabs{flex-wrap:wrap}.tab{flex:1 1 30%}
+.chip.st{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.chip.ok{background:var(--accent);color:var(--on-accent)}
+.sel{margin-top:12px}
+.sel label{font-size:13px;margin-bottom:4px}
+.sel select{min-height:46px;font-size:15px}
+.who{color:var(--muted);font-size:13px;margin:-10px 0 14px}
+</style>
+</head>
+<body>
+<main>
+
+<section class="view" id="v-home">
+  <div class="logo big"><span class="o">H</span>ome<span class="o">Fi</span><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 54 42 24" stroke-width="7"/><path d="M36 10l18 18" stroke-width="11"/><path d="M52 54 24 26" stroke-width="7"/><path d="M13 13a9.5 9.5 0 1 0 15 4" stroke-width="6"/></svg></div>
+  <p class="tag">সমস্যা জানান, সমাধান আমরা করি।</p>
+  <div class="run">
+    <button class="opt primary" data-go="booking">Booking</button>
+    <button class="opt" data-go="login">Login</button>
+  </div>
+  <div class="msg bad" id="setupMsg"></div>
+</section>
+
+<section class="view" id="v-booking" hidden>
+  <button class="back" data-go="home">&larr; Back</button>
+  <section id="formView">
+    <h1>Booking</h1>
+    <div class="cust">
+      <div class="f"><label for="name">Customer name</label><input id="name" autocomplete="name"></div>
+      <div class="f"><label for="addr">Address</label><input id="addr" autocomplete="street-address"></div>
+      <div class="f"><label for="phone">Phone number</label><input id="phone" type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"><div class="err" id="phoneErr"></div></div>
+    </div>
+    <datalist id="catList"></datalist>
+    <div id="bks"></div>
+    <button class="btn ghost" id="add" type="button">+ Add booking</button>
+    <button class="btn" id="go" type="button">Submit booking</button>
+    <div class="err" id="bookErr"></div>
+  </section>
+  <section class="done" id="doneView">
+    <h1>Booking received</h1>
+    <div id="ids"></div>
+    <p class="hint">Our team will confirm and assign a technician soon. Keep your booking ID.</p>
+    <button class="btn ghost" id="again" type="button">New booking</button>
+  </section>
+</section>
+
+<section class="view" id="v-login" hidden>
+  <button class="back" data-go="home">&larr; Back</button>
+  <h1>Login</h1>
+  <p class="hint" style="margin:0 0 16px">For admin and technicians. Same login, your role opens the right screen.</p>
+  <div class="cust">
+    <div class="f"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="username" inputmode="email"></div>
+    <div class="f"><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password"></div>
+  </div>
+  <button class="btn" id="loginGo" type="button">Log in</button>
+  <div class="msg" id="loginMsg" role="status"></div>
+  <div class="run" style="margin-top:28px"><button class="opt" data-go="create">Create new user</button></div>
+</section>
+
+<section class="view" id="v-create" hidden>
+  <button class="back" data-go="login">&larr; Back</button>
+  <h1>Create new user</h1>
+  <p class="hint" style="margin:0 0 16px">New accounts can log in only after the admin approves them.</p>
+  <div class="cust">
+    <div class="f"><label for="cName">Full name</label><input id="cName" autocomplete="name"></div>
+    <div class="f"><label for="cPhone">Phone number</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+    <div class="f"><label for="cEmail">Email</label><input id="cEmail" type="email" autocomplete="email" inputmode="email"></div>
+    <div class="f"><label for="cPass">Password (min 8)</label><input id="cPass" type="password" autocomplete="new-password"></div>
+    <div class="f"><label for="cPass2">Confirm password</label><input id="cPass2" type="password" autocomplete="new-password"></div>
+  </div>
+  <button class="btn" id="createGo" type="button">Create user</button>
+  <div class="msg" id="createMsg" role="status"></div>
+</section>
+
+<section class="view" id="v-dash" hidden>
+  <button class="back" id="dashOut" type="button">&larr; Log out</button>
+  <h1>Bookings</h1>
+  <div class="who" id="dashWho"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="list"></div>
+  <button class="btn ghost" id="csv" type="button">Download all (CSV)</button>
+  <p class="hint" id="dashNote"></p>
+</section>
+
+<section class="view" id="v-tjobs" hidden>
+  <button class="back" id="techOut" type="button">&larr; Log out</button>
+  <h1>My jobs</h1>
+  <div class="who" id="techWho"></div>
+  <div id="tlist"></div>
+  <p class="hint" id="tNote"></p>
+</section>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ================= helpers =================
+var $=function(i){return document.getElementById(i)};
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function lc(x){return String(x||'').trim().toLowerCase()}
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtTime(v){var t=String(v||'00:00').split(':'),h=+t[0],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+t[1]+' '+ap}
+function normPhone(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('880')===0)d='0'+d.slice(3);return d}
+function okPhone(v){return /^01[3-9]\d{8}$/.test(normPhone(v))}
+function show(v){document.querySelectorAll('.view').forEach(function(s){s.hidden=s.id!=='v-'+v});window.scrollTo(0,0)}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b)show(b.dataset.go)});
+
+var WORK={not_yet:'Not yet',on_the_way:'On the way',working:'Working',complete:'Complete'};
+var sb=null;
+try{if(window.supabase&&typeof SUPABASE_URL!=='undefined'&&SUPABASE_URL.indexOf('YOUR')<0)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){}
+if(!sb)$('setupMsg').textContent='Setup needed: add your Supabase URL and anon key in config.js.';
+
+function items(b){return (b.items&&b.items.length)?b.items:[{n:b.service,a:+b.price||0}]}
+function base(b){return items(b).reduce(function(t,x){return t+(+x.a||0)},0)}
+function bill(b){return Math.max(0,base(b)-(+b.discount||0))}
+
+// ================= catalog + booking form =================
+var CAT={
+ "Electrical":{"Wiring":["Room wiring","Conduit wiring","Concealed wiring","Rewiring","Short circuit fix","Cable fault fix"],"Fan":["Ceiling fan install","Fan repair","Regulator change","Exhaust fan install"],"Switch & socket":["Switch replace","Switch board install","Socket replace","Sparking socket fix"],"Lighting":["LED install","Panel light install","Tube light fix","Decor lighting"],"MCB & DB box":["MCB replace","MCB trip fix","DB box install","DB box repair"]},
+ "AC & Refrigerator":{"AC":["AC install","AC servicing","AC gas refill","AC repair","AC uninstall"],"Refrigerator":["Gas charge","Compressor repair","Thermostat replace","General repair"],"Freezer":["Freezer repair","Gas charge"]},
+ "Plumbing":{"Tap & mixer":["Tap replace","Mixer install","Tap leak fix"],"Pipe":["Pipe leak repair","Pipe replace","Blockage clear"],"Water tank & pump":["Pump repair","Pump install","Tank cleaning"],"Bathroom fittings":["Commode install","Basin install","Shower install"]},
+ "Home Appliance":{"Washing machine":["Washing machine repair","Installation","Drain pump replace"],"Microwave oven":["Microwave repair","Magnetron replace"],"Geyser":["Geyser install","Geyser repair"],"Water purifier":["Filter change","Servicing","Installation"]},
+ "Grill & Metal Work":{"Window grill":["New grill","Grill repair","Grill painting"],"Gate":["Gate fabrication","Gate repair"],"Shed & rack":["Shed fabrication","Rack fabrication"]}
+};
+function fill(l,a){l.innerHTML='';a.forEach(function(s){var o=document.createElement('option');o.value=s;l.appendChild(o)})}
+function keyOf(o,k){var t=lc(k);if(!t)return null;for(var x in o)if(lc(x)===t)return x;return null}
+function pick(o,k){var x=keyOf(o,k);return x===null?undefined:o[x]}
+fill($('catList'),Object.keys(CAT));
+var seq=0;
+function addBooking(){
+  seq++;var n=seq,c=document.createElement('div');c.className='bk';
+  c.innerHTML='<header><h2></h2><button type="button" class="rm">Remove</button></header>'+
+   '<div class="f"><label>Category</label><input class="cat" list="catList" placeholder="Select or type" autocomplete="off"></div>'+
+   '<div class="f"><label>Sub category</label><input class="sub" list="subL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="subL'+n+'"></datalist></div>'+
+   '<div class="f"><label>Service</label><input class="svc" list="svcL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="svcL'+n+'"></datalist></div>'+
+   '<div class="f"><label>Service price (optional)</label><div class="price"><span>৳</span><input class="price-in" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>'+
+   '<div class="f ok"><label>Booking date</label><input class="date" type="date" min="'+today()+'" value="'+today()+'"></div>'+
+   '<div class="f ok"><label>Booking time</label><input class="time" type="time" value="11:00"></div>';
+  $('bks').appendChild(c);
+  var q=function(s){return c.querySelector(s)};
+  function fSvc(){var m=pick(CAT,q('.cat').value)||{};fill($('svcL'+n),pick(m,q('.sub').value)||[])}
+  function fSub(){var m=pick(CAT,q('.cat').value)||{};fill($('subL'+n),Object.keys(m));fSvc()}
+  q('.cat').addEventListener('input',fSub);q('.sub').addEventListener('input',fSvc);
+  c.querySelectorAll('input').forEach(function(i){i.addEventListener('input',function(){i.classList.remove('bad');i.closest('.f').classList.toggle('ok',!!i.value.trim())})});
+  q('.rm').addEventListener('click',function(){c.remove();renumber()});
+  renumber();return c;
+}
+function renumber(){var cs=document.querySelectorAll('.bk');
+  cs.forEach(function(c,i){c.querySelector('h2').textContent='Booking '+(i+1);c.querySelector('.rm').style.display=cs.length>1?'':'none'});
+  $('go').textContent=cs.length>1?'Submit '+cs.length+' bookings':'Submit booking'}
+addBooking();
+$('add').addEventListener('click',function(){var c=addBooking();c.scrollIntoView({behavior:'smooth',block:'start'})});
+['name','addr','phone'].forEach(function(i){$(i).addEventListener('input',function(){$(i).classList.remove('bad');$(i).closest('.f').classList.toggle('ok',!!$(i).value.trim())})});
+
+$('go').addEventListener('click',async function(){
+  var err=$('bookErr');err.textContent='';$('phoneErr').textContent='';
+  var bad=null,mark=function(i){i.classList.add('bad');bad=bad||i};
+  ['name','addr'].forEach(function(i){if(!$(i).value.trim())mark($(i))});
+  if(!okPhone($('phone').value)){mark($('phone'));$('phoneErr').textContent='Enter a valid 11-digit number like 01XXXXXXXXX.'}
+  var rows=[];
+  document.querySelectorAll('.bk').forEach(function(c){
+    var q=function(s){return c.querySelector(s)};
+    ['.cat','.sub','.svc','.date','.time'].forEach(function(s){if(!q(s).value.trim())mark(q(s))});
+    rows.push({category:q('.cat').value.trim(),sub:q('.sub').value.trim(),service:q('.svc').value.trim(),price:+q('.price-in').value||0,date:q('.date').value,time:q('.time').value});
+  });
+  if(bad){bad.focus();return}
+  if(!sb){err.textContent='App is not connected to the database yet.';return}
+  var btn=$('go');btn.disabled=true;
+  var r=await sb.rpc('create_bookings',{p_customer:$('name').value.trim(),p_phone:normPhone($('phone').value),p_address:$('addr').value.trim(),p_rows:rows});
+  btn.disabled=false;
+  if(r.error){err.textContent='Could not submit. Please try again.';return}
+  var ids=$('ids');ids.innerHTML='';(r.data||[]).forEach(function(c){ids.appendChild(el('span','id',c))});
+  $('formView').style.display='none';$('doneView').style.display='block';window.scrollTo(0,0);
+});
+$('again').addEventListener('click',function(){
+  $('bks').innerHTML='';seq=0;addBooking();['name','addr','phone'].forEach(function(i){$(i).value='';$(i).closest('.f').classList.remove('ok')});
+  $('doneView').style.display='none';$('formView').style.display='block';
+});
+
+// ================= auth =================
+var me=null,channel=null;
+function msg(id,t,bad){var m=$(id);m.className='msg'+(bad?' bad':'');m.textContent=t}
+$('loginGo').addEventListener('click',async function(){
+  if(!sb)return msg('loginMsg','Setup needed: add your Supabase keys in config.js.',1);
+  var email=$('lEmail').value.trim(),pw=$('lPass').value;
+  if(!email||!pw)return msg('loginMsg','Enter your email and password.',1);
+  msg('loginMsg','Logging in...');
+  var r=await sb.auth.signInWithPassword({email:email,password:pw});
+  if(r.error)return msg('loginMsg','Wrong email or password.',1);
+  $('lPass').value='';await enter();
+});
+$('createGo').addEventListener('click',async function(){
+  if(!sb)return msg('createMsg','Setup needed: add your Supabase keys in config.js.',1);
+  var n=$('cName').value.trim(),p=$('cPhone').value,e=$('cEmail').value.trim(),a=$('cPass').value,b=$('cPass2').value;
+  if(!n||!e)return msg('createMsg','Name and email are required.',1);
+  if(!okPhone(p))return msg('createMsg','Enter a valid 11-digit phone number.',1);
+  if(a.length<8)return msg('createMsg','Password must be at least 8 characters.',1);
+  if(a!==b)return msg('createMsg','Passwords do not match.',1);
+  var r=await sb.auth.signUp({email:e,password:a,options:{data:{name:n,phone:normPhone(p)}}});
+  if(r.error)return msg('createMsg',r.error.message,1);
+  ['cName','cPhone','cEmail','cPass','cPass2'].forEach(function(i){$(i).value=''});
+  msg('createMsg','Account created. You can log in after the admin approves it.');
+});
+async function enter(){
+  var s=await sb.auth.getSession();if(!s.data.session)return;
+  var r=await sb.from('profiles').select('*').eq('id',s.data.session.user.id).maybeSingle();
+  me=r.data;
+  if(me&&me.role==='admin')return startAdmin();
+  if(me&&me.role==='technician')return startTech();
+  await sb.auth.signOut();me=null;show('login');
+  msg('loginMsg','Your account is waiting for admin approval.',1);
+}
+async function logout(){if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
+$('dashOut').addEventListener('click',logout);$('techOut').addEventListener('click',logout);
+function listen(fn){if(channel)sb.removeChannel(channel);
+  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).subscribe()}
+if(sb)enter();
+
+// ================= bill sheet =================
+function billSheet(b,admin,done){
+  var list=items(b).map(function(x){return {n:x.n,a:+x.a||0}}),disc=+b.discount||0;
+  var sh=el('div','sheet'),f=el('form'),rows=el('div'),tot=el('p','bl'),err=el('div','err');f.noValidate=true;f.onsubmit=function(e){e.preventDefault()};
+  f.appendChild(el('h2','',(admin?'Bill — ':'Work and bill — ')+b.code));f.appendChild(rows);
+  function sum(){return list.reduce(function(t,x){return t+(+x.a||0)},0)}
+  function upd(){tot.textContent='Total ৳ '+Math.max(0,sum()-disc)}
+  function draw(){rows.innerHTML='';list.forEach(function(x,i){
+    var w=el('div','sf'),nI=document.createElement('input'),aI=document.createElement('input'),rm=el('button','sb','Remove');
+    nI.placeholder='Work item';nI.value=x.n;nI.oninput=function(){x.n=nI.value};
+    aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='৳ amount';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
+    rm.type='button';rm.style.marginTop='8px';rm.onclick=function(){if(list.length>1){list.splice(i,1);draw();upd()}};
+    w.appendChild(nI);w.appendChild(aI);if(list.length>1)w.appendChild(rm);rows.appendChild(w)})}
+  draw();
+  var add=el('button','btn ghost','+ Add work item');add.type='button';add.onclick=function(){list.push({n:'',a:0});draw();upd()};f.appendChild(add);
+  if(admin){var w=el('div','sf');w.style.marginTop='14px';var dI=document.createElement('input');dI.type='number';dI.min=0;dI.inputMode='decimal';dI.value=disc;
+    dI.oninput=function(){disc=+dI.value||0;upd()};w.appendChild(el('label','','Discount (৳)'));w.appendChild(dI);f.appendChild(w)}
+  var sv=el('button','btn','Save bill'),cn=el('button','btn ghost','Cancel');sv.type=cn.type='button';
+  cn.onclick=function(){sh.remove()};sh.onclick=function(e){if(e.target===sh)sh.remove()};
+  sv.onclick=async function(){
+    if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every work item needs a name.';return}
+    if(disc>sum()){err.textContent='Discount cannot be more than the total.';return}
+    var d={items:list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0}})};if(admin)d.discount=disc;
+    var r=await sb.from('bookings').update(d).eq('id',b.id);
+    if(r.error){err.textContent='Could not save. Try again.';return}
+    sh.remove();if(done)done();
+  };
+  upd();f.appendChild(tot);f.appendChild(err);f.appendChild(sv);f.appendChild(cn);sh.appendChild(f);document.body.appendChild(sh);
+}
+
+// ================= invoice (PDF) =================
+function invoice(b){
+  var J=window.jspdf;if(!J){alert('PDF library did not load. Check your internet.');return}
+  var d=new J.jsPDF({unit:'mm',format:'a4'}),y=20,L=18,R=192;
+  d.setFont('helvetica','bold');d.setFontSize(22);d.text('HomeFix',L,y);
+  d.setFontSize(12);d.text('INVOICE',R,y,{align:'right'});y+=8;
+  d.setFont('helvetica','normal');d.setFontSize(10);d.text('homefix.live',L,y);
+  d.text('Invoice no: '+b.code,R,y,{align:'right'});y+=5;
+  d.text('Date: '+(b.booking_date||today()),R,y,{align:'right'});y+=10;
+  d.setDrawColor(150);d.line(L,y,R,y);y+=8;
+  d.setFont('helvetica','bold');d.text('Billed to',L,y);y+=6;
+  d.setFont('helvetica','normal');
+  [b.customer,b.phone,b.address].forEach(function(t){d.splitTextToSize(String(t||''),R-L).forEach(function(s){d.text(s,L,y);y+=5})});
+  y+=3;d.text('Service: '+[b.category,b.sub,b.service].filter(Boolean).join(' / '),L,y);y+=10;
+  d.setFont('helvetica','bold');d.text('Work item',L,y);d.text('Amount (Tk)',R,y,{align:'right'});y+=3;d.line(L,y,R,y);y+=6;
+  d.setFont('helvetica','normal');
+  items(b).forEach(function(x){
+    if(y>265){d.addPage();y=20}
+    var ls=d.splitTextToSize(String(x.n),120);d.text(ls,L,y);d.text(String(+x.a||0),R,y,{align:'right'});y+=5*ls.length+2});
+  y+=2;d.line(L,y,R,y);y+=7;
+  d.text('Subtotal',L,y);d.text(String(base(b)),R,y,{align:'right'});y+=6;
+  if(+b.discount){d.text('Discount',L,y);d.text('- '+(+b.discount),R,y,{align:'right'});y+=6}
+  d.setFont('helvetica','bold');d.setFontSize(12);d.text('Total',L,y);d.text('Tk '+bill(b),R,y,{align:'right'});y+=14;
+  d.setFont('helvetica','normal');d.setFontSize(9);d.text('Thank you for choosing HomeFix.',L,y);
+  d.save('HomeFix-invoice-'+b.code+'.pdf');
+}
+
+// ================= admin =================
+var bks=[],users=[],tab='new';
+var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled'],['team','Team']];
+function startAdmin(){
+  show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
+  loadAdmin();listen(loadAdmin);
+}
+async function loadAdmin(){
+  var a=await sb.from('bookings').select('*').order('created_at',{ascending:false});
+  var u=await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  if(a.error||u.error){$('dashNote').textContent='Could not load data.';return}
+  bks=a.data||[];users=u.data||[];$('dashNote').textContent='';renderAdmin();
+}
+function inTab(b,t){
+  if(t==='new')return b.status==='pending';
+  if(t==='active')return b.status==='confirmed'&&b.work_status!=='complete';
+  if(t==='done')return b.status==='confirmed'&&b.work_status==='complete';
+  if(t==='cancelled')return b.status==='cancelled';
+}
+function techName(id){var u=users.filter(function(x){return x.id===id})[0];return u?(u.name||u.email):'—'}
+function card(b){
+  var c=el('div','bc'),r=el('div','rw');
+  r.appendChild(el('b','',b.code));
+  var label=b.status==='confirmed'?WORK[b.work_status]:(b.status==='pending'?'New':'Cancelled');
+  r.appendChild(el('span','chip'+(b.status==='pending'?' new':b.work_status==='complete'&&b.status==='confirmed'?' ok':''),label));
+  c.appendChild(r);c.appendChild(el('div','nm',b.customer));
+  var p=el('p'),a=el('a','',b.phone);a.href='tel:'+String(b.phone).replace(/[^\d+]/g,'');p.appendChild(a);c.appendChild(p);
+  c.appendChild(el('p','',b.address));
+  c.appendChild(el('p','',[b.category,b.sub,b.service].filter(Boolean).join(' / ')));
+  c.appendChild(el('p','',b.booking_date+', '+fmtTime(b.booking_time)));
+  if(b.tech_id)c.appendChild(el('p','','Technician: '+techName(b.tech_id)));
+  c.appendChild(el('p','bl','Bill ৳ '+bill(b)+(+b.discount?' (discount ৳ '+(+b.discount)+')':'')));
+  return c;
+}
+function techSelect(b){
+  var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Technician'));
+  var o0=el('option','','Select technician');o0.value='';s.appendChild(o0);
+  users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
+  w.appendChild(s);w._s=s;return w;
+}
+async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
+function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
+function renderAdmin(){
+  var T=$('tabs');T.innerHTML='';
+  TABS.forEach(function(t){
+    var n=t[0]==='team'?users.filter(function(u){return u.role==='pending'}).length:bks.filter(function(b){return inTab(b,t[0])}).length;
+    var x=el('button','tab',t[1]+(n?' ('+n+')':''));x.type='button';x.setAttribute('aria-pressed',tab===t[0]);x.onclick=function(){tab=t[0];renderAdmin()};T.appendChild(x)});
+  var L=$('list');L.innerHTML='';
+  if(tab==='team')return renderTeam(L);
+  var rows=bks.filter(function(b){return inTab(b,tab)});
+  if(!rows.length)L.appendChild(el('p','hint','Nothing here yet.'));
+  rows.forEach(function(b){
+    var c=card(b),ac=el('div','acts'),ts;
+    if(b.status==='pending'){
+      ts=techSelect(b);c.appendChild(ts);
+      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}upd(b.id,{status:'confirmed',tech_id:ts._s.value})}));
+      ac.appendChild(btn('Cancel','del',function(){upd(b.id,{status:'cancelled'})}));
+    }else if(b.status==='confirmed'){
+      ts=techSelect(b);c.appendChild(ts);
+      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value})}));
+      ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
+      ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+      ac.appendChild(btn('Cancel','del',function(){if(confirm('Cancel this booking?'))upd(b.id,{status:'cancelled'})}));
+    }else{
+      ac.appendChild(btn('Reopen','',function(){upd(b.id,{status:'pending'})}));
+      ac.appendChild(btn('Delete','del',async function(){if(!confirm('Delete permanently?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)$('dashNote').textContent='Could not delete.';else loadAdmin()}));
+    }
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+function renderTeam(L){
+  var rows=users.filter(function(u){return u.role!=='admin'});
+  if(!rows.length)L.appendChild(el('p','hint','No users yet. New sign-ups appear here for approval.'));
+  rows.forEach(function(u){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',u.name||u.email));
+    r.appendChild(el('span','chip'+(u.role==='pending'?' new':''),u.role==='pending'?'Waiting':'Technician'));
+    c.appendChild(r);c.appendChild(el('p','',u.email));if(u.phone)c.appendChild(el('p','',u.phone));
+    var ac=el('div','acts');
+    var set=function(role){return async function(){var x=await sb.from('profiles').update({role:role}).eq('id',u.id);if(x.error)$('dashNote').textContent='Could not update user.';else loadAdmin()}};
+    if(u.role==='pending')ac.appendChild(btn('Approve as technician','pri',set('technician')));
+    else ac.appendChild(btn('Remove access','del',set('pending')));
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+$('csv').addEventListener('click',function(){
+  var q=function(v,p){var s=String(v==null?'':v).replace(/"/g,'""');if(p)s='="'+s+'"';else s='"'+s+'"';return s};
+  var out=['Code,Customer,Phone,Address,Category,Sub category,Service,Price,Discount,Bill,Date,Time,Technician,Status,Work status,Work items'];
+  bks.forEach(function(b){out.push([q(b.code),q(b.customer),q(b.phone,1),q(b.address),q(b.category),q(b.sub),q(b.service),base(b),+b.discount||0,bill(b),q(b.booking_date),q(b.booking_time),q(techName(b.tech_id)),q(b.status),q(WORK[b.work_status]),q(items(b).map(function(x){return x.n+' '+x.a}).join('; '))].join(','))});
+  var blob=new Blob(['\ufeff'+out.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='homefix-bookings.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+});
+
+// ================= technician =================
+var tJobs=[];
+function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.name||me.email);loadTech();listen(loadTech)}
+async function loadTech(){
+  var r=await sb.from('bookings').select('*').eq('tech_id',me.id).eq('status','confirmed');
+  if(r.error){$('tNote').textContent='Could not load your jobs.';return}
+  tJobs=r.data||[];$('tNote').textContent='';renderTech();
+}
+function renderTech(){
+  var L=$('tlist');L.innerHTML='';
+  var rows=tJobs.slice().sort(function(a,b){var ad=a.work_status==='complete',bd=b.work_status==='complete';return (ad-bd)||String(a.booking_date+a.booking_time).localeCompare(String(b.booking_date+b.booking_time))});
+  if(!rows.length)L.appendChild(el('p','hint','No jobs assigned yet.'));
+  rows.forEach(function(b){
+    var c=card(b),w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
+    Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
+    s.onchange=async function(){
+      var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
+      if(r.error){$('tNote').textContent='Could not update status.';return}
+      await loadTech();
+      if(s.value==='complete'&&!(b.items&&b.items.length)){var nb=tJobs.filter(function(x){return x.id===b.id})[0];if(nb)billSheet(nb,false,loadTech)}
+    };
+    w.appendChild(s);c.appendChild(w);
+    var ac=el('div','acts');
+    ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
+    ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+</script>
+</body>
+</html>
