@@ -400,7 +400,7 @@ function inTab(b,t){
   if(t==='done')return b.status==='confirmed'&&b.work_status==='complete';
   if(t==='cancelled')return b.status==='cancelled';
 }
-function techName(id){var u=users.filter(function(x){return x.id===id})[0];return u?(u.name||u.email):'—'}
+function techName(id){var u=users.filter(function(x){return x.id===id})[0];return u?((u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)):'—'}
 function card(b){
   var c=el('div','bc'),r=el('div','rw');
   r.appendChild(el('b','',b.code));
@@ -418,7 +418,7 @@ function card(b){
 function techSelect(b){
   var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Technician'));
   var o0=el('option','','Select technician');o0.value='';s.appendChild(o0);
-  users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
+  users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
   w.appendChild(s);w._s=s;return w;
 }
 async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
@@ -456,7 +456,7 @@ function renderTeam(L){
   if(!rows.length)L.appendChild(el('p','hint','No users yet. New sign-ups appear here for approval.'));
   rows.forEach(function(u){
     var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',u.name||u.email));
-    r.appendChild(el('span','chip'+(u.role==='pending'?' new':''),u.role==='pending'?'Waiting':'Technician'));
+    r.appendChild(el('span','chip'+(u.role==='pending'?' new':''),u.role==='pending'?'Waiting':(u.tech_code||'Technician')));
     c.appendChild(r);c.appendChild(el('p','',u.email));if(u.phone)c.appendChild(el('p','',u.phone));
     var ac=el('div','acts');
     var set=function(role){return async function(){var x=await sb.from('profiles').update({role:role}).eq('id',u.id);if(x.error)$('dashNote').textContent='Could not update user.';else loadAdmin()}};
@@ -475,7 +475,7 @@ $('csv').addEventListener('click',function(){
 
 // ================= technician =================
 var tJobs=[];
-function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.name||me.email);loadTech();listen(loadTech)}
+function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.tech_code?me.tech_code+' · ':'')+(me.name||me.email);loadTech();listen(loadTech)}
 async function loadTech(){
   var r=await sb.from('bookings').select('*').eq('tech_id',me.id).eq('status','confirmed');
   if(r.error){$('tNote').textContent='Could not load your jobs.';return}
