@@ -350,7 +350,8 @@ function billSheet(b,admin,done){
   sv.onclick=async function(){
     if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every work item needs a name.';return}
     if(disc>sum()){err.textContent='Discount cannot be more than the total.';return}
-    var d={items:list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0}})};if(admin)d.discount=disc;
+    // FIX: price column-ও আপডেট হবে (আগে শুধু items আর discount আপডেট হতো)
+    var d={items:list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0}}),price:sum()};if(admin)d.discount=disc;
     var r=await sb.from('bookings').update(d).eq('id',b.id);
     if(r.error){err.textContent='Could not save. Try again.';return}
     sh.remove();if(done)done();
