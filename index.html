@@ -1085,11 +1085,12 @@ function renderAdmin(){
     var c=card(b),ac=el('div','acts'),ts;
     if(b.status==='pending'){
       ts=techSelect(b);c.appendChild(ts);
-      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}upd(b.id,{status:'confirmed',tech_id:ts._s.value})}));
+      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}assignFlow(b,ts._s.value)}));
       ac.appendChild(btn('Cancel','del',function(){upd(b.id,{status:'cancelled'})}));
     }else if(b.status==='confirmed'){
       ts=techSelect(b);c.appendChild(ts);
       ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value})}));
+      ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,ts._s.value||b.tech_id)}));
       ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
       ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
       ac.appendChild(btn('Cancel','del',function(){if(confirm('Cancel this booking?'))upd(b.id,{status:'cancelled'})}));
@@ -1127,6 +1128,50 @@ $('csv').addEventListener('click',function(){
   a.href=URL.createObjectURL(blob);a.download='homefix-bookings.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
 });
 
+// ================= assign + send details (WhatsApp / SMS / imo) =================
+function intlPhone(v){var n=normPhone(v);return n.indexOf('0')===0?'88'+n:n}
+function jobMsg(b,t,d,tm,who){
+  var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
+  var L=[who==='customer'?'HomeFix — আপনার বুকিং নিশ্চিত হয়েছে':'HomeFix — নতুন কাজ',
+   'Booking: '+b.code,'Service: '+svc,'Date: '+d,'Time: '+fmtTime(tm)];
+  if(who==='customer'){L.push('Technician: '+(t?(t.name||t.email):'—')+(t&&t.phone?' ('+t.phone+')':''));L.push('Address: '+b.address);L.push('Bill: ৳ '+bill(b))}
+  else{L.push('Customer: '+b.customer);L.push('Phone: '+b.phone);L.push('Address: '+b.address);L.push('Bill: ৳ '+bill(b));L.push('Status update করতে app-এ login করুন।')}
+  return L.join('\n');
+}
+async function copyTxt(t){try{await navigator.clipboard.writeText(t);return true}catch(e){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();var ok=false;try{ok=document.execCommand('copy')}catch(x){}a.remove();return ok}}
+function sendSheet(b,techId){
+  var t=users.filter(function(x){return x.id===techId})[0];
+  if(!t){alert('আগে technician select করুন');return}
+  var sh=el('div','sheet'),f=el('form');f.appendChild(el('h2','','Send job details'));
+  var to=document.createElement('select');to.style.marginTop='8px';
+  [['tech','Technician — '+(t.name||t.email)],['customer','Customer — '+b.customer]].forEach(function(x){var o=el('option','',x[1]);o.value=x[0];to.appendChild(o)});
+  var lb=el('label','','কখন যাবে (visit date & time)');lb.style.display='block';lb.style.marginTop='10px';
+  var dt=accField('input','Date','date');dt.value=b.booking_date||today();
+  var tm=accField('input','Time','time');tm.value=b.booking_time||'11:00';
+  var ta=document.createElement('textarea');ta.rows=9;ta.style.cssText='width:100%;margin-top:8px;font:inherit';
+  var note=el('p','hint','');
+  function phone(){return to.value==='customer'?b.phone:t.phone}
+  function refresh(){ta.value=jobMsg(b,t,dt.value,tm.value,to.value);if(!phone())note.textContent='এই নম্বরে phone নেই — Copy ব্যবহার করুন।';else note.textContent=''}
+  [to,dt,tm].forEach(function(x){x.onchange=refresh});refresh();
+  [to,lb,dt,tm,ta,note].forEach(function(x){f.appendChild(x)});
+  var ac=el('div','acts');
+  async function saveTime(){if(dt.value!==b.booking_date||tm.value!==b.booking_time){var r=await sb.from('bookings').update({booking_date:dt.value,booking_time:tm.value}).eq('id',b.id);if(!r.error){b.booking_date=dt.value;b.booking_time=tm.value}}}
+  function need(){if(!phone()){alert('Phone number নেই');return false}return true}
+  ac.appendChild(btn('WhatsApp','pri',async function(){if(!need())return;await saveTime();window.open('https://wa.me/'+intlPhone(phone())+'?text='+encodeURIComponent(ta.value),'_blank')}));
+  ac.appendChild(btn('Message','',async function(){if(!need())return;await saveTime();location.href='sms:'+normPhone(phone())+'?&body='+encodeURIComponent(ta.value)}));
+  ac.appendChild(btn('imo','',async function(){if(!need())return;await saveTime();var ok=await copyTxt(ta.value);note.textContent=ok?'Message copy হয়েছে — imo খুলে paste করুন।':'Copy হয়নি, নিচের লেখা manually copy করুন।';location.href='imo://'}));
+  ac.appendChild(btn('Call','',function(){if(need())location.href='tel:'+normPhone(phone())}));
+  ac.appendChild(btn('Copy','',async function(){await saveTime();note.textContent=(await copyTxt(ta.value))?'Copied':'Copy হয়নি'}));
+  ac.appendChild(btn('Close','',function(){sh.remove();loadAdmin()}));
+  f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh){sh.remove();loadAdmin()}};document.body.appendChild(sh);
+}
+async function assignFlow(b,techId){
+  if(!techId){$('dashNote').textContent='Select a technician first.';return}
+  var r=await sb.from('bookings').update({status:'confirmed',tech_id:techId}).eq('id',b.id);
+  if(r.error){$('dashNote').textContent='Could not save: '+r.error.message;return}
+  b.status='confirmed';b.tech_id=techId;sendSheet(b,techId);
+}
+
 // ================= technician =================
 var tJobs=[];
 function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.tech_code?me.tech_code+' · ':'')+(me.name||me.email);loadTech();listen(loadTech)}
@@ -1144,15 +1189,6 @@ function renderTech(){
     var c=card(b),w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
     Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
     s.onchange=async function(){
-      if(s.value==='complete'&&bill(b)<=0){
-        s.value=b.work_status||'not_started';
-        alert('Bill দেওয়া হয়নি। আগে bill সেভ করুন, তারপর job Complete হবে।');
-        billSheet(b,false,async function(){
-          var r2=await sb.from('bookings').update({work_status:'complete'}).eq('id',b.id);
-          if(r2.error)$('tNote').textContent='Could not update status.';
-          await loadTech()});
-        return;
-      }
       var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
       if(r.error){$('tNote').textContent='Could not update status.';return}
       await loadTech();
@@ -1172,7 +1208,7 @@ function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
 function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
 function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
 function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
-function accColl(b){var m=String(b.pay_mode||'cash').toLowerCase();return m==='cash'?bill(b):0}
+function accColl(b){return b.pay_mode==='online'?0:bill(b)}
 function accBal(jobs,deps){
   return sumOf(jobs,accColl)
    -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
@@ -1409,11 +1445,6 @@ body::before{
 #smartToolsBg span:nth-child(7){left:26%;top:78%}.smart-tools-bg span:nth-child(8){right:34%;top:88%}
 @keyframes homefixToolFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(5deg)}}
 .invoice-action{background:#54bda7!important;color:#07312a!important;font-weight:800!important}
-
-/* Logo: soft red */
-.logo{color:#C9372C;text-shadow:0 2px 12px rgba(201,55,44,.10)}
-.logo .o{color:#E2483D}
-.logo svg{color:#C9372C;filter:drop-shadow(0 2px 5px rgba(201,55,44,.15))}
 </style>
 
 <script id="homefix-smart-overrides">
@@ -1428,7 +1459,7 @@ body::before{
   addSmartTools();
 
   /* ---------- helpers ---------- */
-  var smartTxnRange='today', smartTxnFilter='all', smartTxnSearch='', dashQ='';
+  var smartTxnRange='today', smartTxnFilter='all', smartTxnSearch='';
   function dateOnly(v){return String(v||'').slice(0,10)}
   function txnDateIn(t,range){
     var d=new Date(dateOnly(t.transaction_date)+'T00:00:00'), now=new Date();
@@ -1495,7 +1526,6 @@ body::before{
     L.appendChild(filters);
 
     var reportBar=document.createElement('div');reportBar.className='smart-actions';
-    reportBar.appendChild(btn('📄 Monthly report (PDF)','primary',reportSheet));
     reportBar.appendChild(btn('💾 Save transaction report','primary',async function(){
       var report={report_type:'transaction',range:smartTxnRange,category:smartTxnFilter,generated_at:new Date().toISOString(),
         money_in:inc,money_out:out,net:net,entry_count:visible.length};
@@ -1610,44 +1640,4 @@ body::before{
       var r=await sb.from('bookings').update(d).eq('id',b.id);
       if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
     }));
-    ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
-  };
-
-
-  /* ---------- WhatsApp / SMS ---------- */
-  function msgPhone(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('880')===0)return d;if(d.indexOf('0')===0)return '88'+d;return d}
-  function msgText(b){
-    var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
-    var tech=users.filter(function(x){return x.id===b.tech_id})[0];
-    if(b.status==='pending')
-      return 'আসসালামু আলাইকুম '+(b.customer||'')+', HomeFix এ আপনার বুকিং ('+b.code+') পেয়েছি। শীঘ্রই টেকনিশিয়ান ঠিক করে আপনাকে জানানো হবে। ধন্যবাদ।';
-    if(b.status==='confirmed'&&b.work_status==='complete')
-      return 'আসসালামু আলাইকুম '+(b.customer||'')+', আপনার কাজ ('+b.code+') সম্পন্ন হয়েছে। মোট বিল ৳'+bill(b)+'। HomeFix ব্যবহার করার জন্য ধন্যবাদ।';
-    return 'আসসালামু আলাইকুম '+(b.customer||'')+', আপনার বুকিং ('+b.code+') কনফার্ম হয়েছে।\n'+(svc?'সার্ভিস: '+svc+'\n':'')+'সময়: '+(b.booking_date||'')+', '+fmtTime(b.booking_time)+
-      (tech?'\nটেকনিশিয়ান: '+(tech.name||tech.email)+(tech.phone?' ('+tech.phone+')':''):'')+'\n— HomeFix';
-  }
-  function addMsgButtons(ac,b){
-    if(b.status==='cancelled'||!b.phone)return;
-    ac.appendChild(btn('💬 WhatsApp','',function(){window.open('https://wa.me/'+msgPhone(b.phone)+'?text='+encodeURIComponent(msgText(b)),'_blank')}));
-    ac.appendChild(btn('✉️ SMS','',function(){location.href='sms:+'+msgPhone(b.phone)+'?body='+encodeURIComponent(msgText(b))}));
-  }
-
-  /* ---------- Monthly PDF report ---------- */
-  function rEsc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-  function monthlyReport(ym){
-    var jobs=accDone(bks).filter(function(b){return String(b.booking_date||'').slice(0,7)===ym});
-    var tx=(accTxns||[]).filter(function(t){return String(t.transaction_date||'').slice(0,7)===ym});
-    var inc=tx.filter(function(t){return t.direction==='IN'}).reduce(function(a,t){return a+txnMoney(t)},0);
-    var out=tx.filter(function(t){return t.direction==='OUT'}).reduce(function(a,t){return a+txnMoney(t)},0);
-    var jobTotal=jobs.reduce(function(a,b){return a+bill(b)},0);
-    var byCat={};tx.filter(function(t){return t.direction==='OUT'}).forEach(function(t){var k=t.category||'Other';byCat[k]=(byCat[k]||0)+txnMoney(t)});
-    var techs=users.filter(function(u){return u.role==='technician'});
-    var tRows=techs.map(function(u){
-      var j=jobs.filter(function(b){return b.tech_id===u.id});
-      var cash=j.reduce(function(a,b){return a+accColl(b)},0);
-      var dep=accDeps.filter(function(d){return d.technician_id===u.id&&d.status==='confirmed'&&d.kind==='joma'&&String(d.created_at||'').slice(0,7)===ym}).reduce(function(a,d){return a+(+d.amount||0)},0);
-      var due=accBal(accDone(bks).filter(function(x){return x.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));
-      return '<tr><td>'+rEsc(u.name||u.email)+'</td><td>'+j.length+'</td><td>'+tk(j.reduce(function(a,b){return a+bill(b)},0))+'</td><td>'+tk(cash)+'</td><td>'+tk(dep)+'</td><td>'+tk(due)+'</td></tr>';
-    }).join('');
-    var jRows=jobs.slice().sort(function(a,b){return String(a.booking_date).localeCompare(String(b.booking_date))}).map(function(b){
-      return '<tr><td>'+rEsc(b.booking_date)+'</td><td>'+rEsc(b.code)+'</td><td>'+rEsc(b.customer)+'</td><td>'+rEsc(techName(b.
+    ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};
