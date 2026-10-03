@@ -117,6 +117,22 @@ input,select{font-weight:500;font-size:16px}
 .sel label{font-size:13px;margin-bottom:4px}
 .sel select{min-height:46px;font-size:15px}
 .who{color:var(--muted);font-size:13px;margin:-10px 0 14px}
+
+.anav{position:fixed;left:0;right:0;bottom:0;z-index:4;background:var(--card);border-top:2px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.anav div{max-width:440px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+.anav button{font:inherit;font-size:11px;font-weight:700;background:none;border:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;position:relative;cursor:pointer}
+.anav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.anav button[aria-pressed=true]{color:var(--accent)}
+.anav .nw{color:var(--ink);padding-top:0}
+.anav .nw .ic{width:54px;height:54px;margin-top:-22px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;border:3px solid var(--bg)}
+.anav .nw[aria-pressed=true]{color:var(--accent)}
+.bd{position:absolute;top:4px;left:calc(50% + 6px);min-width:16px;height:16px;border-radius:99px;background:var(--err);color:#fff;font-size:10px;font-style:normal;display:grid;place-items:center;padding:0 4px}
+.bd[hidden]{display:none}
+body.hasnav main{padding-bottom:120px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+.tile{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.tile b{display:block;font-size:22px}.tile span{font-size:12px;color:var(--muted);font-weight:600}
+details.bc summary{cursor:pointer}
 </style>
 </head>
 <body>
@@ -133,7 +149,7 @@ input,select{font-weight:500;font-size:16px}
 </section>
 
 <section class="view" id="v-booking" hidden>
-  <button class="back" data-go="home">&larr; Back</button>
+  <button class="back" id="bkBack" data-go="home">&larr; Back</button>
   <section id="formView">
     <h1>Booking</h1>
     <div class="cust">
@@ -185,7 +201,7 @@ input,select{font-weight:500;font-size:16px}
 
 <section class="view" id="v-dash" hidden>
   <button class="back" id="dashOut" type="button">&larr; Log out</button>
-  <h1>Bookings</h1>
+  <h1 id="dashTitle">Dashboard</h1>
   <div class="who" id="dashWho"></div>
   <div class="tabs" id="tabs"></div>
   <div id="list"></div>
@@ -202,6 +218,13 @@ input,select{font-weight:500;font-size:16px}
 </section>
 
 </main>
+<nav class="anav" id="anav" hidden><div>
+<button type="button" data-p="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard<i class="bd" id="bd-dash" hidden></i></button>
+<button type="button" data-p="tech"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Technician<i class="bd" id="bd-tech" hidden></i></button>
+<button type="button" class="nw" data-p="new" id="nav-new"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>New</button>
+<button type="button" data-p="svc"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Services</button>
+<button type="button" data-p="txn"><svg viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Transactions<i class="bd" id="bd-txn" hidden></i></button>
+</div></nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="config.js"></script>
@@ -214,7 +237,8 @@ function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()
 function fmtTime(v){var t=String(v||'00:00').split(':'),h=+t[0],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+t[1]+' '+ap}
 function normPhone(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('880')===0)d='0'+d.slice(3);return d}
 function okPhone(v){return /^01[3-9]\d{8}$/.test(normPhone(v))}
-function show(v){document.querySelectorAll('.view').forEach(function(s){s.hidden=s.id!=='v-'+v});window.scrollTo(0,0)}
+function show(v){document.querySelectorAll('.view').forEach(function(s){s.hidden=s.id!=='v-'+v});window.scrollTo(0,0);
+  var on=!!window.isAdm&&(v==='dash'||v==='booking');var n=document.getElementById('anav');if(n)n.hidden=!on;document.body.classList.toggle('hasnav',on)}
 document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b)show(b.dataset.go)});
 
 var WORK={not_yet:'Not yet',on_the_way:'On the way',working:'Working',complete:'Complete'};
@@ -322,11 +346,14 @@ async function enter(){
   await sb.auth.signOut();me=null;show('login');
   msg('loginMsg','Your account is waiting for admin approval.',1);
 }
-async function logout(){if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
+async function logout(){window.isAdm=false;$('bkBack').dataset.go='home';if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
 $('dashOut').addEventListener('click',logout);$('techOut').addEventListener('click',logout);
 function listen(fn){if(channel)sb.removeChannel(channel);
   channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).subscribe()}
-if(sb)enter();
+$('anav').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;
+  if(b.dataset.p==='new'){$('bkBack').dataset.go='dash';document.querySelectorAll('#anav [data-p]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});show('booking');return}
+  page=b.dataset.p;show('dash');renderAdmin()});
+if(sb){enter();loadServices()}
 
 // ================= bill sheet =================
 function billSheet(b,admin,done){
@@ -387,10 +414,10 @@ function invoice(b){
 }
 
 // ================= admin =================
-var bks=[],users=[],tab='new';
-var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled'],['hisab','Hisab'],['team','Team']];
+var bks=[],users=[],tab='new',page='dash';
+var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled']];
 function startAdmin(){
-  show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
+  window.isAdm=true;page='dash';show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
   loadAdmin();listen(loadAdmin);
 }
 async function loadAdmin(){
@@ -430,14 +457,94 @@ function techSelect(b){
 }
 async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
 function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
+function renderNav(){
+  document.querySelectorAll('#anav [data-p]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.p===page)});
+  var set=function(id,n){var e=$(id);e.textContent=n;e.hidden=!n};
+  set('bd-dash',bks.filter(function(b){return inTab(b,'new')}).length);
+  set('bd-tech',users.filter(function(u){return u.role==='pending'}).length);
+  set('bd-txn',accDeps.filter(function(d){return d.status==='pending'}).length);
+}
+var svcRows=[],svcErr='',svcOpen={};
+function buildCat(rows){var c={};rows.forEach(function(r){c[r.category]=c[r.category]||{};(c[r.category][r.sub]=c[r.category][r.sub]||[]).push(r.name)});return c}
+async function loadServices(){
+  if(!sb)return;
+  var r=await sb.from('services').select('*').order('id');
+  if(r.error){svcErr=r.error.message;return}
+  svcErr='';svcRows=r.data||[];
+  if(svcRows.length)CAT=buildCat(svcRows);
+  fill($('catList'),Object.keys(CAT));
+}
+async function svcDo(p){var x=await p;if(x.error){$('dashNote').textContent='Could not save: '+x.error.message;return}
+  $('dashNote').textContent='';await loadServices();renderAdmin()}
+function svcAsk(msg,cur){var v=prompt(msg,cur||'');if(v===null)return null;v=v.trim();return v||null}
+function renderSvc(L){
+  if(svcErr)L.appendChild(el('p','err','Services table not ready. Run homefix_services.sql in Supabase. ('+svcErr+')'));
+  if(!svcRows.length){
+    var c=el('div','bc');c.appendChild(el('b','','Service list is not in the database yet'));
+    c.appendChild(el('p','','Save the current default list once, then you can add, edit and delete from here.'));
+    var ac=el('div','acts');
+    ac.appendChild(btn('Save default list','pri',function(){
+      var rows=[];Object.keys(CAT).forEach(function(k){Object.keys(CAT[k]).forEach(function(m){CAT[k][m].forEach(function(n){rows.push({category:k,sub:m,name:n})})})});
+      svcDo(sb.from('services').upsert(rows,{onConflict:'category,sub,name',ignoreDuplicates:true}))}));
+    c.appendChild(ac);L.appendChild(c);return;
+  }
+  var f=el('div','bc');f.appendChild(el('b','','Add service'));
+  var ic=accField('input','Category'),is=accField('input','Sub category'),inn=accField('input','Service name');
+  ic.setAttribute('list','catList');is.setAttribute('list','subAdm');
+  var dl=document.createElement('datalist');dl.id='subAdm';
+  ic.oninput=function(){var m=pick(CAT,ic.value)||{};fill(dl,Object.keys(m))};
+  f.appendChild(ic);f.appendChild(is);f.appendChild(dl);f.appendChild(inn);
+  var fa=el('div','acts');
+  fa.appendChild(btn('Add','pri',function(){
+    var k=ic.value.trim(),m=is.value.trim(),n=inn.value.trim();
+    if(!k||!m||!n){$('dashNote').textContent='Fill category, sub category and service name.';return}
+    svcOpen[k]=true;svcDo(sb.from('services').upsert([{category:k,sub:m,name:n}],{onConflict:'category,sub,name',ignoreDuplicates:true}))}));
+  f.appendChild(fa);L.appendChild(f);
+  L.appendChild(el('p','hint',Object.keys(CAT).length+' categories, '+svcRows.length+' services'));
+  Object.keys(CAT).forEach(function(k){
+    var d=document.createElement('details');d.className='bc';d.open=!!svcOpen[k];
+    d.addEventListener('toggle',function(){svcOpen[k]=d.open});
+    var sm=el('summary','',k);sm.style.fontWeight='700';d.appendChild(sm);
+    var ca=el('div','acts');
+    ca.appendChild(btn('Rename','',function(){var v=svcAsk('Rename category',k);if(v&&v!==k){svcOpen[v]=true;svcDo(sb.from('services').update({category:v}).eq('category',k))}}));
+    ca.appendChild(btn('Delete','del',function(){if(confirm('Delete category "'+k+'" and all its services?'))svcDo(sb.from('services').delete().eq('category',k))}));
+    d.appendChild(ca);
+    Object.keys(CAT[k]).forEach(function(m){
+      d.appendChild(el('div','nm',m));
+      var sa=el('div','acts');sa.style.marginTop='6px';
+      sa.appendChild(btn('Rename','',function(){var v=svcAsk('Rename sub category',m);if(v&&v!==m)svcDo(sb.from('services').update({sub:v}).eq('category',k).eq('sub',m))}));
+      sa.appendChild(btn('Delete','del',function(){if(confirm('Delete "'+m+'" and its services?'))svcDo(sb.from('services').delete().eq('category',k).eq('sub',m))}));
+      sa.appendChild(btn('+ Add here','',function(){ic.value=k;is.value=m;ic.oninput();inn.focus();window.scrollTo(0,0)}));
+      d.appendChild(sa);
+      svcRows.filter(function(r){return r.category===k&&r.sub===m}).forEach(function(r){
+        var row=el('div','rw');row.style.marginTop='10px';row.appendChild(el('span','',r.name));
+        var ra=el('div','acts');ra.style.marginTop='0';
+        ra.appendChild(btn('Edit','',function(){var v=svcAsk('Edit service name',r.name);if(v&&v!==r.name)svcDo(sb.from('services').update({name:v}).eq('id',r.id))}));
+        ra.appendChild(btn('Delete','del',function(){if(confirm('Delete "'+r.name+'"?'))svcDo(sb.from('services').delete().eq('id',r.id))}));
+        row.appendChild(ra);d.appendChild(row)});
+    });
+    L.appendChild(d);
+  });
+}
 function renderAdmin(){
-  var T=$('tabs');T.innerHTML='';
+  var T=$('tabs');T.innerHTML='';var L=$('list');L.innerHTML='';
+  document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
+  $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions'}[page];
+  $('csv').style.display=page==='dash'?'':'none';
+  renderNav();
+  if(page==='tech')return renderTeam(L);
+  if(page==='txn')return renderHisab(L);
+  if(page==='svc')return renderSvc(L);
+  var tiles=el('div','tiles'),todayInc=sumOf(accDone(bks).filter(function(b){return b.booking_date===today()}),bill);
+  [['New bookings',bks.filter(function(b){return inTab(b,'new')}).length,function(){tab='new';renderAdmin()}],
+   ['Active jobs',bks.filter(function(b){return inTab(b,'active')}).length,function(){tab='active';renderAdmin()}],
+   ['Income today',tk(todayInc),function(){page='txn';renderAdmin()}],
+   ['Deposits to confirm',accDeps.filter(function(d){return d.status==='pending'}).length,function(){page='txn';renderAdmin()}]
+  ].forEach(function(t){var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=t[2];tiles.appendChild(x)});
+  T.parentNode.insertBefore(tiles,T);
   TABS.forEach(function(t){
-    var n=t[0]==='hisab'?accDeps.filter(function(d){return d.status==='pending'}).length:t[0]==='team'?users.filter(function(u){return u.role==='pending'}).length:bks.filter(function(b){return inTab(b,t[0])}).length;
+    var n=bks.filter(function(b){return inTab(b,t[0])}).length;
     var x=el('button','tab',t[1]+(n?' ('+n+')':''));x.type='button';x.setAttribute('aria-pressed',tab===t[0]);x.onclick=function(){tab=t[0];renderAdmin()};T.appendChild(x)});
-  var L=$('list');L.innerHTML='';
-  if(tab==='team')return renderTeam(L);
-  if(tab==='hisab')return renderHisab(L);
   var rows=bks.filter(function(b){return inTab(b,tab)});
   if(!rows.length)L.appendChild(el('p','hint','Nothing here yet.'));
   rows.forEach(function(b){
@@ -467,6 +574,19 @@ function renderTeam(L){
     r.appendChild(el('span','chip'+(u.role==='pending'?' new':''),u.role==='pending'?'Waiting':(u.tech_code||'Technician')));
     c.appendChild(r);c.appendChild(el('p','',u.email));if(u.phone)c.appendChild(el('p','',u.phone));
     var ac=el('div','acts');
+    if(u.role==='technician'){
+      var bl=accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));
+      c.appendChild(el('p','bl',bl>=0?'Owes company '+tk(bl):'Company owes '+tk(-bl)));
+      c.appendChild(el('p','','Commission '+accPct(u.id)+'%'));
+      ac.appendChild(btn('Commission %','',async function(){
+        var v=prompt('Commission % for this technician',accPct(u.id));if(v===null)return;v=+v;
+        if(!(v>=0&&v<=100)){alert('Enter 0 to 100');return}
+        var x=await sb.from('profiles').update({commission_pct:v}).eq('id',u.id);
+        if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
+      if(bl<0)ac.appendChild(btn('Paid out','pri',async function(){
+        var x=await sb.from('acc_deposits').insert({technician_id:u.id,kind:'payout',amount:-bl,method:'Admin',status:'confirmed'});
+        if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+    }
     var set=function(role){return async function(){var x=await sb.from('profiles').update({role:role}).eq('id',u.id);if(x.error)$('dashNote').textContent='Could not update user.';else loadAdmin()}};
     if(u.role==='pending')ac.appendChild(btn('Approve as technician','pri',set('technician')));
     else ac.appendChild(btn('Remove access','del',set('pending')));
@@ -559,26 +679,6 @@ function renderHisab(L){
       ac.appendChild(btn('Reject','del',function(){accSet(d.id,'rejected')}));
       c.appendChild(ac);L.appendChild(c)});
   }
-
-  L.appendChild(el('h2','','Technician balance'));
-  var techs=users.filter(function(u){return u.role==='technician'});
-  if(!techs.length)L.appendChild(el('p','hint','No technicians yet.'));
-  techs.forEach(function(t){
-    var b=accBal(all.filter(function(j){return j.tech_id===t.id}),accDeps.filter(function(d){return d.technician_id===t.id}));
-    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',techName(t.id)));
-    r.appendChild(el('span','chip st',accPct(t.id)+'%'));c.appendChild(r);
-    c.appendChild(el('p','bl',b>=0?'Owes company '+tk(b):'Company owes '+tk(-b)));
-    var ac=el('div','acts');
-    ac.appendChild(btn('Set commission %','',async function(){
-      var v=prompt('Commission % for this technician',accPct(t.id));if(v===null)return;v=+v;
-      if(!(v>=0&&v<=100)){alert('0 - 100');return}
-      var x=await sb.from('profiles').update({commission_pct:v}).eq('id',t.id);
-      if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
-    if(b<0)ac.appendChild(btn('Paid out','pri',async function(){
-      var x=await sb.from('acc_deposits').insert({technician_id:t.id,kind:'payout',amount:-b,method:'Admin',status:'confirmed'});
-      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
-    c.appendChild(ac);L.appendChild(c);
-  });
 
   L.appendChild(el('h2','','Add expense'));
   var f=el('div','bc'),cat=accSel(['Parts / Material','Transport','Marketing','Office','Other']),amt=accField('input','Amount','number'),note=accField('input','Note');
