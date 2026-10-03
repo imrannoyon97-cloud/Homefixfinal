@@ -548,7 +548,7 @@ input::placeholder{color:#8fa6a1!important}
 </div></nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="config.js"></script>
+<script src="config.js"></script><script>window.HOMEFIX_DRIVE_WEBAPP_URL=window.HOMEFIX_DRIVE_WEBAPP_URL||"";</script>
 <script>
 // ================= helpers =================
 var $=function(i){return document.getElementById(i)};
@@ -678,60 +678,155 @@ if(sb){enter();loadServices()}
 
 // ================= bill sheet =================
 function billSheet(b,admin,done){
-  var list=items(b).map(function(x){return {n:x.n,a:+x.a||0}}),disc=+b.discount||0;
-  var sh=el('div','sheet'),f=el('form'),rows=el('div'),tot=el('p','bl'),err=el('div','err');f.noValidate=true;f.onsubmit=function(e){e.preventDefault()};
-  f.appendChild(el('h2','',(admin?'Bill — ':'Work and bill — ')+b.code));f.appendChild(rows);
+  var list=items(b).map(function(x){return {n:x.n,a:+x.a||0,qty:+x.qty||1}}),disc=admin?(+b.discount||0):0;
+  var sh=el('div','sheet'),f=el('form'),rows=el('div'),tot=el('p','bl'),err=el('div','err');
+  f.noValidate=true;f.onsubmit=function(e){e.preventDefault()};
+  f.appendChild(el('h2','',(admin?'🧾 Bill — ':'🧾 Work & Bill — ')+b.code));
+  f.appendChild(el('p','hint','Add only the services/parts actually provided. Technician cannot give discount.'));
+  f.appendChild(rows);
   function sum(){return list.reduce(function(t,x){return t+(+x.a||0)},0)}
-  function upd(){tot.textContent='Total ৳ '+Math.max(0,sum()-disc)}
-  function draw(){rows.innerHTML='';list.forEach(function(x,i){
-    var w=el('div','sf'),nI=document.createElement('input'),aI=document.createElement('input'),rm=el('button','sb','Remove');
-    nI.placeholder='Work item';nI.value=x.n;nI.oninput=function(){x.n=nI.value};
-    aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='৳ amount';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
-    rm.type='button';rm.style.marginTop='8px';rm.onclick=function(){if(list.length>1){list.splice(i,1);draw();upd()}};
-    w.appendChild(nI);w.appendChild(aI);if(list.length>1)w.appendChild(rm);rows.appendChild(w)})}
+  function upd(){tot.textContent='Total ৳ '+Math.max(0,sum()-disc).toLocaleString('en-US')}
+  function draw(){
+    rows.innerHTML='';
+    list.forEach(function(x,i){
+      var w=el('div','sf'),nI=document.createElement('input'),aI=document.createElement('input'),qI=document.createElement('input'),rm=el('button','sb','Remove');
+      nI.placeholder='Service / part / work item';nI.value=x.n;nI.oninput=function(){x.n=nI.value};
+      qI.type='number';qI.min=1;qI.inputMode='numeric';qI.placeholder='Qty';qI.value=x.qty||1;qI.oninput=function(){x.qty=Math.max(1,+qI.value||1);upd()};
+      aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='Amount';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
+      rm.type='button';rm.style.marginTop='8px';rm.onclick=function(){if(list.length>1){list.splice(i,1);draw();upd()}};
+      w.appendChild(nI);w.appendChild(qI);w.appendChild(aI);if(list.length>1)w.appendChild(rm);rows.appendChild(w)
+    })
+  }
   draw();
-  var add=el('button','btn ghost','+ Add work item');add.type='button';add.onclick=function(){list.push({n:'',a:0});draw();upd()};f.appendChild(add);
-  if(admin){var w=el('div','sf');w.style.marginTop='14px';var dI=document.createElement('input');dI.type='number';dI.min=0;dI.inputMode='decimal';dI.value=disc;
-    dI.oninput=function(){disc=+dI.value||0;upd()};w.appendChild(el('label','','Discount (৳)'));w.appendChild(dI);f.appendChild(w)}
+  var add=el('button','btn ghost','+ Add service / part');add.type='button';add.onclick=function(){list.push({n:'',a:0,qty:1});draw();upd()};f.appendChild(add);
+
+  var pm=accSel(['Cash','Bank','Mobile banking']);pm.value=b.pay_mode==='online'?'Mobile banking':(b.pay_mode||'Cash');
+  f.appendChild(el('label','','Payment method'));f.appendChild(pm);
+
+  if(admin){
+    var w=el('div','sf');w.style.marginTop='14px';
+    var dI=document.createElement('input');dI.type='number';dI.min=0;dI.inputMode='decimal';dI.value=disc;
+    dI.oninput=function(){disc=+dI.value||0;upd()};
+    w.appendChild(el('label','','Discount (Admin only)'));w.appendChild(dI);f.appendChild(w)
+  }
+
   var sv=el('button','btn','💾 Save bill'),cn=el('button','btn ghost','Cancel');sv.type=cn.type='button';
   cn.onclick=function(){sh.remove()};sh.onclick=function(e){if(e.target===sh)sh.remove()};
   sv.onclick=async function(){
-    if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every work item needs a name.';return}
-    if(disc>sum()){err.textContent='Discount cannot be more than the total.';return}
-    // FIX: price column-ও আপডেট হবে (আগে শুধু items আর discount আপডেট হতো)
-    var d={items:list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0}}),price:sum()};if(admin)d.discount=disc;
+    if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every service/work item needs a name.';return}
+    if(disc>sum()){err.textContent='Discount cannot be more than the subtotal.';return}
+    var clean=list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0,qty:+x.qty||1}});
+    var d={items:clean,price:sum(),pay_mode:pm.value};
+    if(admin)d.discount=disc;
     var r=await sb.from('bookings').update(d).eq('id',b.id);
-    if(r.error){err.textContent='Could not save. Try again.';return}
+    if(r.error){err.textContent='Could not save bill: '+r.error.message;return}
+
+    // Keep the service transaction synchronized with the latest bill.
+    var txn={
+      transaction_date:b.booking_date||today(),
+      transaction_id:'TX-'+String(b.code||b.id).replace(/[^A-Za-z0-9-]/g,''),
+      booking_id:b.id,
+      customer:b.customer||null,
+      technician_name:techName(b.tech_id),
+      direction:'IN',
+      category:'Service',
+      amount:Math.max(0,sum()-disc),
+      payment_way:pm.value,
+      way:pm.value,
+      title:(b.category||'Service')+' / '+(b.service||'Service'),
+      note:'Invoice '+(b.code||'')
+    };
+    var old=await sb.from('acc_transactions').select('id').eq('booking_id',b.id).eq('category','Service').maybeSingle();
+    var tr;
+    if(old.error){
+      tr=await sb.from('acc_transactions').insert(txn);
+    }else if(old.data){
+      tr=await sb.from('acc_transactions').update(txn).eq('id',old.data.id);
+    }else{
+      tr=await sb.from('acc_transactions').insert(txn);
+    }
+    if(tr.error && tr.error.code!=='PGRST204'){
+      console.warn('Service transaction sync failed',tr.error);
+    }
     sh.remove();if(done)done();
   };
   upd();f.appendChild(tot);f.appendChild(err);f.appendChild(sv);f.appendChild(cn);sh.appendChild(f);document.body.appendChild(sh);
 }
 
 // ================= invoice (PDF) =================
-function invoice(b){
+async function invoice(b){
   var J=window.jspdf;if(!J){alert('PDF library did not load. Check your internet.');return}
-  var d=new J.jsPDF({unit:'mm',format:'a4'}),y=20,L=18,R=192;
-  d.setFont('helvetica','bold');d.setFontSize(22);d.text('HomeFix',L,y);
-  d.setFontSize(12);d.text('INVOICE',R,y,{align:'right'});y+=8;
-  d.setFont('helvetica','normal');d.setFontSize(10);d.text('homefix.live',L,y);
-  d.text('Invoice no: '+b.code,R,y,{align:'right'});y+=5;
-  d.text('Date: '+(b.booking_date||today()),R,y,{align:'right'});y+=10;
-  d.setDrawColor(150);d.line(L,y,R,y);y+=8;
-  d.setFont('helvetica','bold');d.text('Billed to',L,y);y+=6;
-  d.setFont('helvetica','normal');
-  [b.customer,b.phone,b.address].forEach(function(t){d.splitTextToSize(String(t||''),R-L).forEach(function(s){d.text(s,L,y);y+=5})});
-  y+=3;d.text('Service: '+[b.category,b.sub,b.service].filter(Boolean).join(' / '),L,y);y+=10;
-  d.setFont('helvetica','bold');d.text('Work item',L,y);d.text('Amount (Tk)',R,y,{align:'right'});y+=3;d.line(L,y,R,y);y+=6;
-  d.setFont('helvetica','normal');
-  items(b).forEach(function(x){
-    if(y>265){d.addPage();y=20}
-    var ls=d.splitTextToSize(String(x.n),120);d.text(ls,L,y);d.text(String(+x.a||0),R,y,{align:'right'});y+=5*ls.length+2});
-  y+=2;d.line(L,y,R,y);y+=7;
-  d.text('Subtotal',L,y);d.text(String(base(b)),R,y,{align:'right'});y+=6;
-  if(+b.discount){d.text('Discount',L,y);d.text('- '+(+b.discount),R,y,{align:'right'});y+=6}
-  d.setFont('helvetica','bold');d.setFontSize(12);d.text('Total',L,y);d.text('Tk '+bill(b),R,y,{align:'right'});y+=14;
-  d.setFont('helvetica','normal');d.setFontSize(9);d.text('Thank you for choosing HomeFix.',L,y);
-  d.save('HomeFix-invoice-'+b.code+'.pdf');
+  var d=new J.jsPDF({unit:'mm',format:'a4'}),y=18,L=16,R=194,W=178;
+  var mint=[64,176,151], dark=[12,41,37], grey=[95,115,110];
+
+  d.setFillColor.apply(d,dark);d.rect(0,0,210,34,'F');
+  d.setTextColor(255,255,255);d.setFont('helvetica','bold');d.setFontSize(23);d.text('HomeFix',L,16);
+  d.setFontSize(9);d.setFont('helvetica','normal');d.text('HOME SERVICE SOLUTION',L,23);
+  d.setFont('helvetica','bold');d.setFontSize(15);d.text('INVOICE',R,16,{align:'right'});
+  d.setFont('helvetica','normal');d.setFontSize(8);d.text('Invoice No: '+b.code,R,23,{align:'right'});
+  y=44;
+
+  d.setTextColor.apply(d,dark);d.setFont('helvetica','bold');d.setFontSize(10);d.text('BILLED TO',L,y);
+  d.setFont('helvetica','normal');d.setFontSize(9);y+=6;
+  [b.customer,b.phone,b.address].forEach(function(t){
+    d.splitTextToSize(String(t||'—'),100).forEach(function(line){d.text(line,L,y);y+=4.5})
+  });
+  d.setFont('helvetica','bold');d.text('JOB DETAILS',120,44);
+  d.setFont('helvetica','normal');d.text('Date: '+(b.booking_date||today()),120,50);
+  d.text('Technician: '+techName(b.tech_id),120,55);
+  d.text('Payment: '+(b.pay_mode||'Cash'),120,60);
+
+  y=Math.max(y,68);
+  d.setFillColor.apply(d,mint);d.roundedRect(L,y,R-L,10,2,2,'F');
+  d.setTextColor(255,255,255);d.setFont('helvetica','bold');d.setFontSize(8);
+  d.text('SERVICE / ITEM',L+4,y+6.5);d.text('QTY',145,y+6.5,{align:'right'});d.text('AMOUNT',R-4,y+6.5,{align:'right'});
+  y+=16;d.setTextColor.apply(d,dark);d.setFont('helvetica','normal');d.setFontSize(9);
+
+  var list=items(b);
+  list.forEach(function(x){
+    if(y>255){d.addPage();y=20}
+    var q=+x.qty||1, ls=d.splitTextToSize(String(x.n||'Service'),112);
+    d.text(ls,L+2,y);
+    d.text(String(q),145,y,{align:'right'});
+    d.text('Tk '+Math.round(+x.a||0).toLocaleString('en-US'),R-4,y,{align:'right'});
+    y+=Math.max(6,4.5*ls.length);
+    d.setDrawColor(220);d.line(L,y-2,R,y-2);d.setDrawColor(150);
+  });
+
+  y+=5;
+  var subtotal=base(b),discount=+b.discount||0,total=bill(b);
+  d.setFont('helvetica','normal');d.setFontSize(9);
+  d.text('Subtotal',145,y,{align:'right'});d.text('Tk '+Math.round(subtotal).toLocaleString('en-US'),R-4,y,{align:'right'});y+=6;
+  if(discount){d.text('Discount',145,y,{align:'right'});d.text('- Tk '+Math.round(discount).toLocaleString('en-US'),R-4,y,{align:'right'});y+=6}
+  d.setFillColor(238,247,244);d.roundedRect(125,y-4,R-125,14,2,2,'F');
+  d.setFont('helvetica','bold');d.setFontSize(12);d.setTextColor.apply(d,dark);
+  d.text('TOTAL',145,y+5,{align:'right'});d.text('Tk '+Math.round(total).toLocaleString('en-US'),R-4,y+5,{align:'right'});
+  y+=24;
+
+  d.setFont('helvetica','normal');d.setFontSize(8);d.setTextColor.apply(d,grey);
+  d.text('Thank you for choosing HomeFix.',L,y);
+  d.text('homefix.live',R,y,{align:'right'});
+  d.text('This invoice is generated from the HomeFix service record.',L,y+5);
+
+  var fileName='HomeFix-Invoice-'+b.code+'.pdf';
+  var blob=d.output('blob');
+  d.save(fileName);
+
+  // Optional secure Google Drive sync: set HOMEFIX_DRIVE_WEBAPP_URL in config.js.
+  try{
+    var endpoint=(typeof HOMEFIX_DRIVE_WEBAPP_URL!=='undefined'?HOMEFIX_DRIVE_WEBAPP_URL:'');
+    if(endpoint){
+      var reader=new FileReader();
+      reader.onload=async function(){
+        try{
+          await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body:JSON.stringify({type:'invoice',fileName:fileName,mimeType:'application/pdf',
+              base64:String(reader.result).split(',')[1],booking_id:b.id,invoice_no:b.code})})
+        }catch(e){console.warn('Drive sync failed',e)}
+      };
+      reader.readAsDataURL(blob);
+    }
+  }catch(e){console.warn(e)}
 }
 
 // ================= admin =================
@@ -996,7 +1091,7 @@ function renderAdmin(){
       ts=techSelect(b);c.appendChild(ts);
       ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value})}));
       ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
-      ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+      ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
       ac.appendChild(btn('Cancel','del',function(){if(confirm('Cancel this booking?'))upd(b.id,{status:'cancelled'})}));
     }else{
       ac.appendChild(btn('Reopen','',function(){upd(b.id,{status:'pending'})}));
@@ -1016,15 +1111,7 @@ function renderTeam(L){
     if(u.role==='technician'){
       var bl=accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));
       c.appendChild(el('p','bl',bl>=0?'Owes company '+tk(bl):'Company owes '+tk(-bl)));
-      c.appendChild(el('p','','Commission '+accPct(u.id)+'%'));
-      ac.appendChild(btn('Commission %','',async function(){
-        var v=prompt('Commission % for this technician',accPct(u.id));if(v===null)return;v=+v;
-        if(!(v>=0&&v<=100)){alert('Enter 0 to 100');return}
-        var x=await sb.from('profiles').update({commission_pct:v}).eq('id',u.id);
-        if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
-      if(bl<0)ac.appendChild(btn('Paid out','pri',async function(){
-        var x=await sb.from('acc_deposits').insert({technician_id:u.id,kind:'payout',amount:-bl,method:'Admin',status:'confirmed'});
-        if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+      c.appendChild(el('p','','Completed work: '+accDone(bks).filter(function(j){return j.tech_id===u.id}).length));
     }
     var set=function(role){return async function(){var x=await sb.from('profiles').update({role:role}).eq('id',u.id);if(x.error)$('dashNote').textContent='Could not update user.';else loadAdmin()}};
     if(u.role==='pending')ac.appendChild(btn('Approve as technician','pri',set('technician')));
@@ -1065,7 +1152,7 @@ function renderTech(){
     w.appendChild(s);c.appendChild(w);
     var ac=el('div','acts');
     ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
-    ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+    ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
     c.appendChild(ac);L.appendChild(c);
   });
 }
@@ -1076,12 +1163,9 @@ function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
 function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
 function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
 function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
-function accPct(id){var u=(me&&id===me.id)?me:users.filter(function(x){return x.id===id})[0];return u&&u.commission_pct!=null?+u.commission_pct:60}
-function accComm(b){return Math.round(bill(b)*accPct(b.tech_id))/100}
 function accColl(b){return b.pay_mode==='online'?0:bill(b)}
-// positive = technician owes company, negative = company owes technician
 function accBal(jobs,deps){
-  return sumOf(jobs,accColl)-sumOf(jobs,accComm)
+  return sumOf(jobs,accColl)
    -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
    +sumOf(deps.filter(function(d){return d.kind==='payout'&&d.status==='confirmed'}),function(d){return d.amount});
 }
@@ -1111,8 +1195,8 @@ function renderHisab(L){
   L.appendChild(accTabs(renderAdmin));
   var all=accDone(bks),jobs=all.filter(function(b){return accInD(b.booking_date)});
   var exps=accExps.filter(function(e){return accInD(e.exp_date||e.created_at)});
-  var inc=sumOf(jobs,bill),cm=sumOf(jobs,accComm),ex=sumOf(exps,function(e){return e.amount}),net=inc-cm-ex;
-  L.appendChild(accSum([['Income',tk(inc)],['Technician commission',tk(cm)],['Other expense',tk(ex)],['Net profit',tk(net),net<0?'var(--err)':null]]));
+  var inc=sumOf(jobs,bill),ex=sumOf(exps,function(e){return e.amount}),net=inc-ex;
+  L.appendChild(accSum([['Income',tk(inc)],['Other expense',tk(ex)],['Net profit',tk(net),net<0?'var(--err)':null]]));
 
   var pend=accDeps.filter(function(d){return d.status==='pending'});
   if(pend.length){
@@ -1166,7 +1250,7 @@ function renderTechAcc(L){
   var all=accDone(tJobs),jobs=all.filter(function(b){return accInD(b.booking_date)});
   var bal=accBal(all,accDeps),pend=sumOf(accDeps.filter(function(d){return d.kind==='joma'&&d.status==='pending'}),function(d){return d.amount});
   var box=el('div');box.appendChild(el('h2','','My income'));box.appendChild(accTabs(renderTech));
-  box.appendChild(accSum([['Jobs done',String(jobs.length)],['My commission',tk(sumOf(jobs,accComm))],['Cash collected',tk(sumOf(jobs,accColl))],
+  box.appendChild(accSum([['Jobs done',String(jobs.length)],['Cash collected',tk(sumOf(jobs,accColl))],
     [bal>=0?'I must deposit (Due)':'Company owes me',tk(Math.abs(bal)),bal>0?'var(--err)':null]]));
   if(pend)box.appendChild(el('p','hint','Waiting for admin to confirm: '+tk(pend)));
   var f=el('div','bc'),amt=accField('input','Amount deposited','number'),m=accSel(['bKash','Nagad','Cash']),t=accField('input','Transaction ID');
@@ -1301,6 +1385,21 @@ body::before{
   .smart-add .wide,.smart-add .save{grid-column:auto}
   .smart-summary{gap:5px}.smart-stat{padding:9px 7px}.smart-stat b{font-size:16px}
 }
+
+/* ===== Invoice + service-work polish ===== */
+.sheet form{max-width:520px;margin:0 auto}
+.sheet .sf{background:rgba(17,61,54,.72);border:1px solid #42786e;border-radius:12px;padding:10px;margin:7px 0}
+.sheet .sf input,.sheet select,.sheet .sf select{background:#0e302b;color:#fff;border:1px solid #4b8178;border-radius:10px;padding:11px;width:100%;box-sizing:border-box}
+.sheet label{display:block;color:#a9cfc5;font-size:11px;margin-top:10px}
+.sheet .bl{font-size:18px;color:#8ed7c8;background:#10362f;padding:12px;border-radius:11px}
+#smartToolsBg{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+#smartToolsBg span{position:absolute;font-size:54px;opacity:.12;filter:saturate(1.25);animation:homefixToolFloat 16s ease-in-out infinite}
+#smartToolsBg span:nth-child(1){left:5%;top:16%}.smart-tools-bg span:nth-child(2){right:9%;top:25%}
+#smartToolsBg span:nth-child(3){left:40%;top:36%}.smart-tools-bg span:nth-child(4){right:18%;top:52%}
+#smartToolsBg span:nth-child(5){left:4%;top:61%}.smart-tools-bg span:nth-child(6){right:5%;top:70%}
+#smartToolsBg span:nth-child(7){left:26%;top:78%}.smart-tools-bg span:nth-child(8){right:34%;top:88%}
+@keyframes homefixToolFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(5deg)}}
+.invoice-action{background:#54bda7!important;color:#07312a!important;font-weight:800!important}
 </style>
 
 <script id="homefix-smart-overrides">
@@ -1380,6 +1479,25 @@ body::before{
       b.onclick=function(){smartTxnFilter=x[0];renderAdmin()};filters.appendChild(b);
     });
     L.appendChild(filters);
+
+    var reportBar=document.createElement('div');reportBar.className='smart-actions';
+    reportBar.appendChild(btn('💾 Save transaction report','primary',async function(){
+      var report={report_type:'transaction',range:smartTxnRange,category:smartTxnFilter,generated_at:new Date().toISOString(),
+        money_in:inc,money_out:out,net:net,entry_count:visible.length};
+      var rr=await sb.from('report_snapshots').insert({report_type:'transaction',period:smartTxnRange,summary:report,created_by:me&&me.id?me.id:null});
+      if(rr.error){alert('Report save failed: '+rr.error.message);return}
+      try{
+        var endpoint=(typeof HOMEFIX_DRIVE_WEBAPP_URL!=='undefined'?HOMEFIX_DRIVE_WEBAPP_URL:'');
+        if(endpoint){
+          var reportText=JSON.stringify({report:report,entries:visible},null,2);
+          var bytes=btoa(unescape(encodeURIComponent(reportText)));
+          await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body:JSON.stringify({type:'transaction-report',fileName:'HomeFix-Transaction-Report-'+today()+'.json',mimeType:'application/json',base64:bytes})});
+          alert('Transaction report saved to Supabase and Google Drive.');
+        }else alert('Transaction report saved to Supabase. Add the Google Drive Web App URL in config.js for Drive backup.');
+      }catch(e){alert('Transaction report saved to Supabase. Drive backup failed.');}
+    }));
+    L.appendChild(reportBar);
 
     var add=document.createElement('div');add.className='smart-add';
     var type=document.createElement('select');['Service','Parts','Other'].forEach(function(x){var o=el('option','',x);o.value=x;type.appendChild(o)});
@@ -1564,10 +1682,10 @@ body::before{
       var card=document.createElement('div');card.className='tech-profile';
       var h=el('div','tech-head');var nm=el('div');nm.appendChild(el('b','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)));nm.appendChild(el('small','',(u.phone||'No phone')+' · '+(u.joining_date||'Joining date not set')));h.appendChild(nm);h.appendChild(el('span','smart-chip',u.speciality||'Technician'));card.appendChild(h);
       var g=document.createElement('div');g.className='tech-grid';
-      [['Total work',done.length],['This month',month.length],['Working',jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length],['Commission',tk(done.reduce(function(s,b){return s+accComm(b)},0))]].forEach(function(x){var s=el('div','tech-stat');s.appendChild(el('small','',x[0]));s.appendChild(el('b','',String(x[1])));g.appendChild(s)});card.appendChild(g);
+      [['Total work',done.length],['This month',month.length],['Working',jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length],['Today',done.filter(function(b){return b.booking_date===today()}).length]].forEach(function(x){var s=el('div','tech-stat');s.appendChild(el('small','',x[0]));s.appendChild(el('b','',String(x[1])));g.appendChild(s)});card.appendChild(g);
       var salary=document.createElement('div');salary.className='salary-box';
-      var base=+u.base_salary||0, comm=month.reduce(function(s,b){return s+accComm(b)},0), net=base+comm+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
-      [['Base salary',tk(base)],['Commission',tk(comm)],['Overtime/Bonus',tk((+u.overtime||0)+(+u.bonus||0))],['Advance',tk(+u.advance||0)],['Net estimate',tk(net)]].forEach(function(x){var r=el('div','salary-row'+(x[0]==='Net estimate'?' total':''));r.appendChild(el('span','',x[0]));r.appendChild(el('b','',x[1]));salary.appendChild(r)});
+      var baseSal=+u.base_salary||0, net=baseSal+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
+      [['Base salary',tk(baseSal)],['Overtime/Bonus',tk((+u.overtime||0)+(+u.bonus||0))],['Advance',tk(+u.advance||0)],['Net estimate',tk(net)]].forEach(function(x){var r=el('div','salary-row'+(x[0]==='Net estimate'?' total':''));r.appendChild(el('span','',x[0]));r.appendChild(el('b','',x[1]));salary.appendChild(r)});
       card.appendChild(salary);
       var ac=el('div','smart-actions');
       ac.appendChild(btn('Work history','',function(){var old=page;page='completed';renderAdmin();$('dashNote').textContent='Technician: '+(u.name||u.email)}));
