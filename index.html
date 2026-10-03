@@ -1144,6 +1144,15 @@ function renderTech(){
     var c=card(b),w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
     Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
     s.onchange=async function(){
+      if(s.value==='complete'&&bill(b)<=0){
+        s.value=b.work_status||'not_started';
+        alert('Bill দেওয়া হয়নি। আগে bill সেভ করুন, তারপর job Complete হবে।');
+        billSheet(b,false,async function(){
+          var r2=await sb.from('bookings').update({work_status:'complete'}).eq('id',b.id);
+          if(r2.error)$('tNote').textContent='Could not update status.';
+          await loadTech()});
+        return;
+      }
       var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
       if(r.error){$('tNote').textContent='Could not update status.';return}
       await loadTech();
@@ -1163,7 +1172,7 @@ function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
 function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
 function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
 function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
-function accColl(b){return b.pay_mode==='online'?0:bill(b)}
+function accColl(b){var m=String(b.pay_mode||'cash').toLowerCase();return m==='cash'?bill(b):0}
 function accBal(jobs,deps){
   return sumOf(jobs,accColl)
    -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
@@ -1400,6 +1409,11 @@ body::before{
 #smartToolsBg span:nth-child(7){left:26%;top:78%}.smart-tools-bg span:nth-child(8){right:34%;top:88%}
 @keyframes homefixToolFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(5deg)}}
 .invoice-action{background:#54bda7!important;color:#07312a!important;font-weight:800!important}
+
+/* Logo: soft red */
+.logo{color:#C9372C;text-shadow:0 2px 12px rgba(201,55,44,.10)}
+.logo .o{color:#E2483D}
+.logo svg{color:#C9372C;filter:drop-shadow(0 2px 5px rgba(201,55,44,.15))}
 </style>
 
 <script id="homefix-smart-overrides">
@@ -1414,7 +1428,7 @@ body::before{
   addSmartTools();
 
   /* ---------- helpers ---------- */
-  var smartTxnRange='today', smartTxnFilter='all', smartTxnSearch='';
+  var smartTxnRange='today', smartTxnFilter='all', smartTxnSearch='', dashQ='';
   function dateOnly(v){return String(v||'').slice(0,10)}
   function txnDateIn(t,range){
     var d=new Date(dateOnly(t.transaction_date)+'T00:00:00'), now=new Date();
@@ -1481,6 +1495,7 @@ body::before{
     L.appendChild(filters);
 
     var reportBar=document.createElement('div');reportBar.className='smart-actions';
+    reportBar.appendChild(btn('📄 Monthly report (PDF)','primary',reportSheet));
     reportBar.appendChild(btn('💾 Save transaction report','primary',async function(){
       var report={report_type:'transaction',range:smartTxnRange,category:smartTxnFilter,generated_at:new Date().toISOString(),
         money_in:inc,money_out:out,net:net,entry_count:visible.length};
@@ -1598,118 +1613,41 @@ body::before{
     ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
   };
 
-  /* ---------- dashboard ---------- */
-  window.renderAdmin=function(){
-    var T=$('tabs'),L=$('list');T.innerHTML='';L.innerHTML='';
-    document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
-    document.querySelectorAll('.new-alert').forEach(function(e){e.remove()});
-    $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions',completed:'Completed Jobs'}[page]||'Dashboard';
-    $('csv').style.display=page==='dash'?'':'none';
-    renderNav();
-    if(page==='tech')return renderTeam(L);
-    if(page==='txn')return renderTransactions(L);
-    if(page==='svc')return renderSvc(L);
-    if(page==='completed')return renderCompletedJobs(L);
 
-    var newRows=bks.filter(function(b){return b.status==='pending'});
-    if(newRows.length){
-      var alertBox=el('button','new-alert');alertBox.type='button';
-      alertBox.onclick=function(){tab='new';drawDash()};
-      alertBox.appendChild(el('span','alert-dot','●'));
-      var aw=el('div');aw.appendChild(el('b','','🔔 New booking alert'));aw.appendChild(el('span','',newRows.length+' new booking'+(newRows.length>1?'s':'')+' waiting'));alertBox.appendChild(aw);alertBox.appendChild(el('span','alert-arrow','›'));T.parentNode.insertBefore(alertBox,T);
-    }
+  /* ---------- WhatsApp / SMS ---------- */
+  function msgPhone(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('880')===0)return d;if(d.indexOf('0')===0)return '88'+d;return d}
+  function msgText(b){
+    var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
+    var tech=users.filter(function(x){return x.id===b.tech_id})[0];
+    if(b.status==='pending')
+      return 'আসসালামু আলাইকুম '+(b.customer||'')+', HomeFix এ আপনার বুকিং ('+b.code+') পেয়েছি। শীঘ্রই টেকনিশিয়ান ঠিক করে আপনাকে জানানো হবে। ধন্যবাদ।';
+    if(b.status==='confirmed'&&b.work_status==='complete')
+      return 'আসসালামু আলাইকুম '+(b.customer||'')+', আপনার কাজ ('+b.code+') সম্পন্ন হয়েছে। মোট বিল ৳'+bill(b)+'। HomeFix ব্যবহার করার জন্য ধন্যবাদ।';
+    return 'আসসালামু আলাইকুম '+(b.customer||'')+', আপনার বুকিং ('+b.code+') কনফার্ম হয়েছে।\n'+(svc?'সার্ভিস: '+svc+'\n':'')+'সময়: '+(b.booking_date||'')+', '+fmtTime(b.booking_time)+
+      (tech?'\nটেকনিশিয়ান: '+(tech.name||tech.email)+(tech.phone?' ('+tech.phone+')':''):'')+'\n— HomeFix';
+  }
+  function addMsgButtons(ac,b){
+    if(b.status==='cancelled'||!b.phone)return;
+    ac.appendChild(btn('💬 WhatsApp','',function(){window.open('https://wa.me/'+msgPhone(b.phone)+'?text='+encodeURIComponent(msgText(b)),'_blank')}));
+    ac.appendChild(btn('✉️ SMS','',function(){location.href='sms:+'+msgPhone(b.phone)+'?body='+encodeURIComponent(msgText(b))}));
+  }
 
-    var tiles=el('div','tiles');
-    [['New bookings',newRows.length,function(){tab='new';drawDash()}],
-     ['Working',bks.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length,function(){tab='active';drawDash()}],
-     ['Not yet working',bks.filter(function(b){return b.status==='confirmed'&&(b.work_status==='not_started'||!b.work_status)}).length,function(){tab='active';drawDash()}],
-     ['Completed',accDone(bks).length,function(){page='completed';renderAdmin()}]
-    ].forEach(function(t){var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=t[2];tiles.appendChild(x)});
-    T.parentNode.insertBefore(tiles,T);
-
-    var controls=el('div','smart-filter');
-    [['new','🆕 New'],['working','🔧 Working'],['notyet','⏳ Not yet'],['all','All']].forEach(function(x){
-      var b=el('button',tab===x[0]?'on':'',x[1]);b.type='button';b.onclick=function(){tab=x[0];drawDash()};controls.appendChild(b);
-    });
-    T.parentNode.insertBefore(controls,T);
-
-    function drawDash(){
-      T.innerHTML='';L.innerHTML='';
-      document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
-      document.querySelectorAll('.new-alert').forEach(function(e){e.remove()});
-      renderAdmin();
-    }
-    var rows=bks.filter(function(b){
-      if(tab==='new')return b.status==='pending';
-      if(tab==='working')return b.status==='confirmed'&&b.work_status==='working';
-      if(tab==='notyet')return b.status==='confirmed'&&(b.work_status==='not_started'||!b.work_status);
-      if(tab==='active')return b.status==='confirmed'&&b.work_status!=='complete';
-      return true;
-    });
-    if(tab==='all')rows=rows.filter(function(b){return b.status!=='cancelled'});
-    if(!rows.length)L.appendChild(el('p','hint','No jobs in this section.'));
-    rows.forEach(function(b){
-      var c=document.createElement('div');c.className='smart-work';
-      var top=el('div','top');top.appendChild(el('b','',b.code+' · '+(b.customer||'—')));
-      top.appendChild(el('small','',b.booking_date||'—'));c.appendChild(top);
-      c.appendChild(el('div','meta','👨‍🔧 '+techName(b.tech_id)+' · 🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')+' · 💰 '+tk(bill(b))));
-      c.appendChild(el('div','meta','Status: '+(b.work_status||b.status||'—')+' · '+(b.booking_time||'')));
-      var ac=el('div','smart-actions');
-      ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));
-      if(b.status==='pending'){
-        var ts=techSelect(b);c.appendChild(ts);
-        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}upd(b.id,{status:'confirmed',tech_id:ts._s.value})}));
-        ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
-      }else if(b.status==='confirmed'){
-        ac.appendChild(btn('Not yet','',function(){upd(b.id,{work_status:'not_started'})}));
-        ac.appendChild(btn('Working','primary',function(){upd(b.id,{work_status:'working'})}));
-        ac.appendChild(btn('Complete','primary',function(){upd(b.id,{work_status:'complete'})}));
-        ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
-      }
-      c.appendChild(ac);L.appendChild(c);
-    });
-  };
-
-  /* ---------- technician smart view ---------- */
-  window.renderTeam=function(L){
-    var rows=users.filter(function(u){return u.role==='technician'});
-    L.appendChild(el('div','section-head')).lastChild;
-    if(!rows.length){L.appendChild(el('p','hint','No technicians yet.'));return}
-    rows.forEach(function(u){
-      var jobs=bks.filter(function(b){return b.tech_id===u.id});
-      var done=jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'});
-      var month=done.filter(function(b){var d=String(b.booking_date||'');var n=new Date();return d.slice(0,7)===n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')});
-      var card=document.createElement('div');card.className='tech-profile';
-      var h=el('div','tech-head');var nm=el('div');nm.appendChild(el('b','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)));nm.appendChild(el('small','',(u.phone||'No phone')+' · '+(u.joining_date||'Joining date not set')));h.appendChild(nm);h.appendChild(el('span','smart-chip',u.speciality||'Technician'));card.appendChild(h);
-      var g=document.createElement('div');g.className='tech-grid';
-      [['Total work',done.length],['This month',month.length],['Working',jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length],['Today',done.filter(function(b){return b.booking_date===today()}).length]].forEach(function(x){var s=el('div','tech-stat');s.appendChild(el('small','',x[0]));s.appendChild(el('b','',String(x[1])));g.appendChild(s)});card.appendChild(g);
-      var salary=document.createElement('div');salary.className='salary-box';
-      var baseSal=+u.base_salary||0, net=baseSal+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
-      [['Base salary',tk(baseSal)],['Overtime/Bonus',tk((+u.overtime||0)+(+u.bonus||0))],['Advance',tk(+u.advance||0)],['Net estimate',tk(net)]].forEach(function(x){var r=el('div','salary-row'+(x[0]==='Net estimate'?' total':''));r.appendChild(el('span','',x[0]));r.appendChild(el('b','',x[1]));salary.appendChild(r)});
-      card.appendChild(salary);
-      var ac=el('div','smart-actions');
-      ac.appendChild(btn('Work history','',function(){var old=page;page='completed';renderAdmin();$('dashNote').textContent='Technician: '+(u.name||u.email)}));
-      ac.appendChild(btn('Edit details','primary',function(){smartEditTech(u)}));card.appendChild(ac);
-      L.appendChild(card);
-    });
-  };
-
-  window.smartEditTech=function(u){
-    var sh=el('div','sheet'),f=el('form');f.appendChild(el('h2','', 'Technician details'));
-    var vals={joining_date:u.joining_date||'',speciality:u.speciality||'',base_salary:u.base_salary||0,overtime:u.overtime||0,bonus:u.bonus||0,advance:u.advance||0,adjustment:u.adjustment||0};
-    var fields={};
-    [['joining_date','Joining date','date'],['speciality','Speciality'],['base_salary','Base salary','number'],['overtime','Overtime','number'],['bonus','Bonus','number'],['advance','Advance','number'],['adjustment','Adjustment','number']].forEach(function(x){
-      var i=accField('input',x[1],x[2]);i.value=vals[x[0]];fields[x[0]]=i;f.appendChild(i);
-    });
-    var ac=el('div','acts');ac.appendChild(btn('Save','pri',async function(){
-      var d={joining_date:fields.joining_date.value||null,speciality:fields.speciality.value.trim(),base_salary:+fields.base_salary.value||0,overtime:+fields.overtime.value||0,bonus:+fields.bonus.value||0,advance:+fields.advance.value||0,adjustment:+fields.adjustment.value||0};
-      var r=await sb.from('profiles').update(d).eq('id',u.id);if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
-    }));ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
-  };
-
-  /* Make dashboard the only place where completed history is opened. */
-})();
-</script>
-
-</body>
-</html>
+  /* ---------- Monthly PDF report ---------- */
+  function rEsc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+  function monthlyReport(ym){
+    var jobs=accDone(bks).filter(function(b){return String(b.booking_date||'').slice(0,7)===ym});
+    var tx=(accTxns||[]).filter(function(t){return String(t.transaction_date||'').slice(0,7)===ym});
+    var inc=tx.filter(function(t){return t.direction==='IN'}).reduce(function(a,t){return a+txnMoney(t)},0);
+    var out=tx.filter(function(t){return t.direction==='OUT'}).reduce(function(a,t){return a+txnMoney(t)},0);
+    var jobTotal=jobs.reduce(function(a,b){return a+bill(b)},0);
+    var byCat={};tx.filter(function(t){return t.direction==='OUT'}).forEach(function(t){var k=t.category||'Other';byCat[k]=(byCat[k]||0)+txnMoney(t)});
+    var techs=users.filter(function(u){return u.role==='technician'});
+    var tRows=techs.map(function(u){
+      var j=jobs.filter(function(b){return b.tech_id===u.id});
+      var cash=j.reduce(function(a,b){return a+accColl(b)},0);
+      var dep=accDeps.filter(function(d){return d.technician_id===u.id&&d.status==='confirmed'&&d.kind==='joma'&&String(d.created_at||'').slice(0,7)===ym}).reduce(function(a,d){return a+(+d.amount||0)},0);
+      var due=accBal(accDone(bks).filter(function(x){return x.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));
+      return '<tr><td>'+rEsc(u.name||u.email)+'</td><td>'+j.length+'</td><td>'+tk(j.reduce(function(a,b){return a+bill(b)},0))+'</td><td>'+tk(cash)+'</td><td>'+tk(dep)+'</td><td>'+tk(due)+'</td></tr>';
+    }).join('');
+    var jRows=jobs.slice().sort(function(a,b){return String(a.booking_date).localeCompare(String(b.booking_date))}).map(function(b){
+      return '<tr><td>'+rEsc(b.booking_date)+'</td><td>'+rEsc(b.code)+'</td><td>'+rEsc(b.customer)+'</td><td>'+rEsc(techName(b.
