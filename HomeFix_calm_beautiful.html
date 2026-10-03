@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b5fff">
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HomeFix</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Hind+Siliguri:wght@600;700&display=swap" rel="stylesheet">
+<style>
+
+:root{--bg:#F1ECE3;--ink:#2B3644;--muted:#6A6D70;--accent:#B25B35;--on-accent:#FFFFFF;--line:#2B3644;--card:#FAF7F1;--err:#B3261E;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171E27;--ink:#EDE8DF;--muted:#A3AAB3;--line:#EDE8DF;--card:#212A35;--err:#FF8A80;--accent:#E0804F;--on-accent:#171E27}}
+:root[data-theme="dark"]{--bg:#171E27;--ink:#EDE8DF;--muted:#A3AAB3;--line:#EDE8DF;--card:#212A35;--err:#FF8A80;--accent:#E0804F;--on-accent:#171E27}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:440px;padding:28px 24px 56px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.bolt{width:40px;height:40px;background:var(--accent);border-radius:11px;display:grid;place-items:center;flex:none}
+.bolt svg{width:22px;height:22px}
+.top b{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:24px;letter-spacing:.02em;display:block;line-height:1}
+.top small{color:var(--muted);font-size:14px}
+h1{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:44px;line-height:1;margin:0 0 24px}
+h2{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:26px;margin:0}
+.f{position:relative;padding-left:30px;margin-bottom:18px}
+.f::after{content:"";position:absolute;left:0;top:6px;width:19px;height:19px;border-radius:50%;background:var(--bg);border:3px solid var(--line)}
+.f.ok::after{background:var(--accent)}
+.cust .f::before{content:"";position:absolute;left:8px;top:30px;bottom:-22px;width:3px;background:var(--line);opacity:.85}
+.cust .f:last-child::before{display:none}
+label{display:block;font-weight:600;font-size:15px;margin-bottom:6px}
+input{width:100%;font:inherit;font-size:17px;min-height:52px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+input:focus-visible,.btn:focus-visible,.rm:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input.bad{border-color:var(--err)}
+.price{display:flex}
+.price span{min-height:52px;display:grid;place-items:center;padding:0 14px;font-weight:600;font-size:18px;background:var(--accent);color:var(--on-accent);border:2px solid var(--line);border-right:0;border-radius:12px 0 0 12px}
+.price input{border-radius:0 12px 12px 0}
+.hint{font-size:13px;color:var(--muted);margin-top:4px}
+.err{font-size:13px;color:var(--err);margin-top:4px}
+.bk{border:2px solid var(--line);border-radius:16px;padding:18px 16px 2px;margin:0 0 16px;background:color-mix(in srgb,var(--card) 60%,transparent)}
+.bk header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.rm{font:inherit;font-weight:600;font-size:14px;min-height:36px;padding:0 12px;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btn{width:100%;font:inherit;font-weight:700;font-size:20px;min-height:62px;border-radius:14px;border:2px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;margin-top:12px}
+.btn.ghost{background:transparent;color:var(--ink);border:2px dashed var(--line);font-size:18px;min-height:56px;margin-top:0}
+.btn:active{transform:translateY(1px)}
+.done{display:none}
+.done h1{margin-bottom:8px}
+.sum{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 18px;margin:16px 0}
+.sum div{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 20%,transparent)}
+.sum div:last-child{border:0}
+.sum span{color:var(--muted)}
+.sum b{text-align:right}
+.id{display:inline-block;background:var(--accent);color:var(--on-accent);font-weight:700;padding:4px 12px;border-radius:8px;margin-right:6px}
+
+[hidden]{display:none!important}
+select{width:100%;font:inherit;font-size:17px;min-height:52px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+select:focus-visible,.opt:focus-visible,.back:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.brand{font-family:Montserrat,system-ui,sans-serif;font-weight:800;font-size:64px;line-height:.9;margin:20px 0 0}
+.brand span{display:block;font-weight:700;font-size:26px;color:var(--muted);margin-top:8px}
+.bolt.big{width:44px;height:44px}
+.run{position:relative;margin-top:48px;display:flex;flex-direction:column;gap:16px;padding-left:34px}
+.run::before{content:"";position:absolute;left:9px;top:28px;bottom:28px;width:3px;background:var(--line);opacity:.85}
+.opt{position:relative;font:inherit;font-weight:600;font-size:18px;min-height:58px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;text-align:left;padding:0 20px}
+.opt::before{content:"";position:absolute;left:-34px;top:50%;margin-top:-10px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:3px solid var(--line)}
+.opt.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent);font-size:20px;min-height:66px}
+.opt.primary::before{background:var(--accent)}
+.opt:active{transform:translateY(1px)}
+.back{font:inherit;font-weight:600;font-size:16px;background:none;border:0;color:var(--ink);padding:0;min-height:44px;margin:-8px 0 8px;cursor:pointer}
+.msg{margin-top:14px;font-size:15px;color:var(--muted)}
+.msg.bad{color:var(--err)}
+
+
+.logo{display:flex;align-items:center;font-weight:800;letter-spacing:-.045em;line-height:1;color:var(--ink)}
+.logo .o{color:var(--accent)}
+.logo svg{width:.92em;height:.92em;margin-left:.06em;color:var(--ink);flex:none}
+.logo.big{font-size:clamp(44px,15vw,64px);margin-top:24px}
+.logo.sm{font-size:28px}
+.top{margin-bottom:24px}
+.top small{margin-left:auto;color:var(--muted);font-weight:600;font-size:13px}
+.tag{font-family:'Hind Siliguri',Montserrat,sans-serif;font-weight:700;font-size:21px;line-height:1.3;margin:14px 0 0}
+.sub{margin:4px 0 0;color:var(--muted);font-weight:600;font-size:14px}
+h1{font-size:34px;letter-spacing:-.025em;margin-bottom:22px}
+h2{font-size:19px;letter-spacing:-.01em}
+label{font-weight:600;font-size:14px}
+input,select{font-weight:500;font-size:16px}
+.opt{font-weight:700;font-size:17px}.opt.primary{font-size:19px}
+.btn{font-weight:700;font-size:18px}.btn.ghost{font-size:17px}
+.price span{font-weight:700}
+
+.tabs{display:flex;gap:8px;margin:0 0 16px}
+.tab{flex:1;font:inherit;font-weight:700;font-size:13px;min-height:44px;border-radius:12px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.tab[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.bc{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.rw{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.chip{font-weight:700;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--ink);color:var(--bg)}
+.chip.new{background:var(--accent);color:var(--on-accent)}
+.bc .nm{font-weight:700;font-size:17px;margin-top:10px}
+.bc p{margin:6px 0 0;font-size:14px;color:var(--muted)}
+.bc p.bl{color:var(--ink);font-weight:700}
+.bc a{color:var(--ink);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.sb{font:inherit;font-weight:700;font-size:14px;min-height:42px;padding:0 14px;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.sb.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.sb.del{color:var(--err);border-color:var(--err)}
+.sheet{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet form{width:100%;max-width:440px;max-height:90vh;overflow:auto;background:var(--bg);color:var(--ink);border-radius:20px 20px 0 0;padding:20px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin-bottom:14px}.sf{margin-bottom:14px}
+.sheet .btn.ghost{margin-top:10px}
+
+.tabs{flex-wrap:wrap}.tab{flex:1 1 30%}
+.chip.st{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.chip.ok{background:var(--accent);color:var(--on-accent)}
+.sel{margin-top:12px}
+.sel label{font-size:13px;margin-bottom:4px}
+.sel select{min-height:46px;font-size:15px}
+.who{color:var(--muted);font-size:13px;margin:-10px 0 14px}
+
+.anav{position:fixed;left:0;right:0;bottom:0;z-index:4;background:var(--card);border-top:2px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.anav div{max-width:440px;margin:auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end}
+.anav button{font:inherit;font-size:11px;font-weight:700;background:none;border:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;position:relative;cursor:pointer}
+.anav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.anav button[aria-pressed=true]{color:var(--accent)}
+.anav .nw{color:var(--ink);padding-top:0}
+.anav .nw .ic{width:54px;height:54px;margin-top:-22px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;border:3px solid var(--bg)}
+.anav .nw[aria-pressed=true]{color:var(--accent)}
+.bd{position:absolute;top:4px;left:calc(50% + 6px);min-width:16px;height:16px;border-radius:99px;background:var(--err);color:#fff;font-size:10px;font-style:normal;display:grid;place-items:center;padding:0 4px}
+.bd[hidden]{display:none}
+body.hasnav main{padding-bottom:120px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+.tile{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.tile b{display:block;font-size:22px}.tile span{font-size:12px;color:var(--muted);font-weight:600}
+details.bc summary{cursor:pointer}
+
+/* ===== HomeFix colourful compact refresh ===== */
+:root{
+  --bg:#f5f7fb;--ink:#182337;--muted:#667085;--accent:#635bff;--on-accent:#fff;
+  --line:#d9e1ef;--card:rgba(255,255,255,.94);--err:#dc3545;
+  --c1:#635bff;--c2:#00a884;--c3:#ff8a34;--c4:#e84393;--c5:#0ea5e9;
+}
+body{
+  position:relative;overflow-x:hidden;
+  background:
+    radial-gradient(circle at 8% 8%,rgba(99,91,255,.14),transparent 24%),
+    radial-gradient(circle at 92% 18%,rgba(0,168,132,.12),transparent 23%),
+    linear-gradient(135deg,#f8fbff,#eef3fa);
+}
+body::before{
+  content:"🔧  ⚡  🪛  🔌  ❄️  🚿  🧰  🪚  💡  🔩  🔧  🛠️  🔌  🚿";
+  position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.10;
+  font-size:34px;line-height:2.5;letter-spacing:18px;
+  transform:rotate(-9deg) scale(1.12);
+  white-space:pre-wrap;word-spacing:26px;
+}
+main{max-width:410px;padding:16px 14px 78px}
+.logo.big{font-size:clamp(38px,12vw,52px);margin-top:8px}
+.tag{font-size:18px;margin:10px 0 0}
+.run{margin-top:28px;padding-left:24px;gap:10px}
+.run::before{left:7px;top:24px;bottom:24px;width:2px}
+.opt{min-height:50px;border-radius:13px;font-size:15px;padding:0 15px;box-shadow:0 5px 16px rgba(35,48,75,.07)}
+.opt.primary{min-height:56px;font-size:17px}
+.top{margin-bottom:16px}
+h1{font-size:28px;margin-bottom:16px}
+h2{font-size:18px}
+.f{padding-left:22px;margin-bottom:12px}
+.f::after{width:14px;height:14px;top:7px;border-width:2px}
+.cust .f::before{left:6px;width:2px}
+input,select{min-height:46px;border-radius:10px;border-width:1.5px;font-size:15px}
+.price span{min-height:46px;padding:0 11px;border-width:1.5px;border-radius:10px 0 0 10px}
+.price input{border-radius:0 10px 10px 0}
+.bk,.bc,.sum{border-width:1.5px;border-radius:14px;padding:13px;margin-bottom:10px}
+.bk{padding-bottom:1px}
+.btn{min-height:50px;border-radius:12px;font-size:16px;margin-top:9px;box-shadow:0 7px 18px rgba(99,91,255,.12)}
+.btn.ghost{min-height:46px;font-size:15px}
+.tabs{gap:6px;margin-bottom:10px}
+.tab{min-height:38px;border-width:1.5px;border-radius:10px;font-size:11px}
+.tile{border-width:1.5px;border-radius:12px;padding:10px;box-shadow:0 5px 15px rgba(35,48,75,.05)}
+.tile b{font-size:19px}
+.tile span{font-size:11px}
+.acts{gap:6px;margin-top:10px}
+.sb{min-height:36px;border-width:1.5px;border-radius:9px;font-size:12px;padding:0 10px}
+.chip{font-size:10px;padding:3px 8px}
+.bc .nm{font-size:15px;margin-top:8px}
+.bc p{font-size:12px;margin:4px 0}
+.anav{background:rgba(255,255,255,.96);border-top:1px solid #d9e1ef;box-shadow:0 -8px 22px rgba(35,48,75,.08)}
+.anav button{font-size:9px;padding:7px 0 6px}
+.anav svg{width:20px;height:20px}
+.anav .nw .ic{width:48px;height:48px;margin-top:-19px;border-width:2px;box-shadow:0 5px 14px rgba(99,91,255,.25)}
+.sheet form{max-width:410px;padding:16px 14px calc(18px + env(safe-area-inset-bottom,0px));border-radius:18px 18px 0 0}
+.sheet input{margin-top:5px}
+.hisab-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px
+}
+.hisab-head .badge{
+  background:linear-gradient(135deg,var(--c1),var(--c4));color:#fff;border-radius:99px;
+  padding:5px 9px;font-size:10px;font-weight:800
+}
+.exp-card{background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,249,255,.96))}
+.exp-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.exp-amount{font-size:18px;font-weight:800;color:var(--c2)}
+.editing{outline:2px solid rgba(99,91,255,.3);background:#f6f5ff}
+.tool-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 12px}
+.tool-strip span{
+  display:flex;align-items:center;justify-content:center;gap:3px;min-height:35px;border-radius:10px;
+  background:rgba(255,255,255,.78);border:1px solid rgba(180,192,215,.55);font-size:10px;font-weight:800
+}
+@media(max-width:360px){main{padding-left:10px;padding-right:10px}.tool-strip{grid-template-columns:repeat(2,1fr)}}
+
+
+/* HomeFix Calm Theme — softer logo + Bengali typography */
+:root{
+  --bg:#F5F7F4;
+  --ink:#29443F;
+  --muted:#71817D;
+  --accent:#6FA89A;
+  --on-accent:#FFFFFF;
+  --line:#D7E2DE;
+  --card:#FFFFFF;
+  --err:#B85C5C;
+}
+body{
+  background:
+    radial-gradient(circle at 12% 8%, rgba(111,168,154,.10), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(185,205,196,.14), transparent 30%),
+    var(--bg);
+}
+body::before{
+  content:"🔧   ⚡   🪛   🔌   ❄️   🚿   🧰   💡   🔩";
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  opacity:.045; font-size:30px; line-height:3.8;
+  letter-spacing:20px; word-spacing:14px;
+  transform:rotate(-10deg) scale(1.15);
+  white-space:pre-wrap;
+}
+main{max-width:440px;padding:24px 20px 56px}
+.logo{
+  color:#29443F;
+  letter-spacing:-.055em;
+  text-shadow:0 2px 12px rgba(41,68,63,.06);
+}
+.logo .o{color:#6FA89A}
+.logo svg{color:#527E74; filter:drop-shadow(0 2px 5px rgba(82,126,116,.12))}
+.logo.big{
+  font-size:clamp(46px,15vw,62px);
+  margin-top:18px;
+}
+.logo.sm{font-size:27px}
+.tag{
+  font-family:'Hind Siliguri',sans-serif;
+  color:#365A53;
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:-.01em;
+  margin-top:16px;
+}
+.sub,.hint,.who{color:#71817D}
+.run{margin-top:42px;gap:12px}
+.opt{
+  border-color:#D7E2DE;
+  background:rgba(255,255,255,.88);
+  color:#29443F;
+  box-shadow:0 6px 18px rgba(41,68,63,.055);
+}
+.opt::before{border-color:#B8CCC5;background:#F5F7F4}
+.opt.primary{
+  background:#6FA89A;
+  border-color:#6FA89A;
+  box-shadow:0 8px 20px rgba(111,168,154,.20);
+}
+.opt.primary::before{background:#6FA89A;border-color:#6FA89A}
+h1,h2{color:#29443F}
+h1{font-family:'Hind Siliguri',Montserrat,sans-serif;font-weight:700}
+label{
+  font-family:'Hind Siliguri',Montserrat,sans-serif;
+  color:#45645E;
+}
+input,select{
+  border-color:#D7E2DE;
+  background:#FFFFFF;
+  color:#29443F;
+  box-shadow:0 3px 12px rgba(41,68,63,.035);
+}
+input:focus-visible,select:focus-visible,.btn:focus-visible,.rm:focus-visible{
+  outline:3px solid rgba(111,168,154,.30);
+}
+.price span,.btn,.sb.pri{
+  background:#6FA89A;
+  border-color:#6FA89A;
+}
+.btn{box-shadow:0 7px 16px rgba(111,168,154,.15)}
+.btn.ghost{
+  border-color:#C9D9D4;
+  color:#45645E;
+  background:rgba(255,255,255,.55);
+}
+.bk,.bc,.sum,.tile,.sheet form{
+  background:rgba(255,255,255,.92);
+  border-color:#D7E2DE;
+  box-shadow:0 6px 20px rgba(41,68,63,.045);
+}
+.chip{background:#29443F;color:#F5F7F4}
+.chip.new,.chip.ok{background:#8BBCAF;color:#fff}
+.tabs .tab{
+  border-color:#D7E2DE;
+  color:#4A6761;
+  background:rgba(255,255,255,.62);
+}
+.tab[aria-pressed=true]{
+  background:#29443F;
+  color:#fff;
+  border-color:#29443F;
+}
+.anav{
+  background:rgba(255,255,255,.96);
+  border-top-color:#D7E2DE;
+  box-shadow:0 -5px 18px rgba(41,68,63,.05);
+}
+.anav button[aria-pressed=true]{color:#6FA89A}
+.anav .nw .ic{
+  background:#6FA89A;
+  border-color:#F5F7F4;
+  box-shadow:0 5px 14px rgba(111,168,154,.22);
+}
+.tile b{color:#29443F}
+.tile span{font-family:'Hind Siliguri',sans-serif;color:#71817D}
+.nm{font-family:'Hind Siliguri',sans-serif}
+.acts .sb{border-color:#D0DDD9}
+.sb{color:#45645E;background:rgba(255,255,255,.72)}
+.sb.del{color:#B85C5C;border-color:#E2BABA}
+.id{background:#6FA89A}
+
+</style>
+</head>
+<body>
+<main>
+
+<section class="view" id="v-home">
+  <div class="logo big"><span class="o">H</span>ome<span class="o">Fi</span><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 54 42 24" stroke-width="7"/><path d="M36 10l18 18" stroke-width="11"/><path d="M52 54 24 26" stroke-width="7"/><path d="M13 13a9.5 9.5 0 1 0 15 4" stroke-width="6"/></svg></div>
+  <p class="tag">সমস্যা জানান, সমাধান আমরা করি।</p><p class="sub brand-sub">আপনার ঘরের যত্নে, HomeFix পাশে।</p>
+  <div class="run">
+    <button class="opt primary" data-go="booking">Booking</button>
+    <button class="opt" data-go="login">Login</button>
+  </div>
+  <div class="msg bad" id="setupMsg"></div>
+</section>
+
+<section class="view" id="v-booking" hidden>
+  <button class="back" id="bkBack" data-go="home">&larr; Back</button>
+  <section id="formView">
+    <h1>Booking</h1>
+    <div class="cust">
+      <div class="f"><label for="name">Customer name</label><input id="name" autocomplete="name"></div>
+      <div class="f"><label for="addr">Address</label><input id="addr" autocomplete="street-address"></div>
+      <div class="f"><label for="phone">Phone number</label><input id="phone" type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"><div class="err" id="phoneErr"></div></div>
+    </div>
+    <datalist id="catList"></datalist>
+    <div id="bks"></div>
+    <button class="btn ghost" id="add" type="button">+ Add booking</button>
+    <button class="btn" id="go" type="button">Submit booking</button>
+    <div class="err" id="bookErr"></div>
+  </section>
+  <section class="done" id="doneView">
+    <h1>Booking received</h1>
+    <div id="ids"></div>
+    <p class="hint">Our team will confirm and assign a technician soon. Keep your booking ID.</p>
+    <button class="btn ghost" id="again" type="button">New booking</button>
+  </section>
+</section>
+
+<section class="view" id="v-login" hidden>
+  <button class="back" data-go="home">&larr; Back</button>
+  <h1>Login</h1>
+  <p class="hint" style="margin:0 0 16px">For admin and technicians. Same login, your role opens the right screen.</p>
+  <div class="cust">
+    <div class="f"><label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="username" inputmode="email"></div>
+    <div class="f"><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password"></div>
+  </div>
+  <button class="btn" id="loginGo" type="button">Log in</button>
+  <div class="msg" id="loginMsg" role="status"></div>
+  <div class="run" style="margin-top:28px"><button class="opt" data-go="create">Create new user</button></div>
+</section>
+
+<section class="view" id="v-create" hidden>
+  <button class="back" data-go="login">&larr; Back</button>
+  <h1>Create new user</h1>
+  <p class="hint" style="margin:0 0 16px">New accounts can log in only after the admin approves them.</p>
+  <div class="cust">
+    <div class="f"><label for="cName">Full name</label><input id="cName" autocomplete="name"></div>
+    <div class="f"><label for="cPhone">Phone number</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+    <div class="f"><label for="cEmail">Email</label><input id="cEmail" type="email" autocomplete="email" inputmode="email"></div>
+    <div class="f"><label for="cPass">Password (min 8)</label><input id="cPass" type="password" autocomplete="new-password"></div>
+    <div class="f"><label for="cPass2">Confirm password</label><input id="cPass2" type="password" autocomplete="new-password"></div>
+  </div>
+  <button class="btn" id="createGo" type="button">Create user</button>
+  <div class="msg" id="createMsg" role="status"></div>
+</section>
+
+<section class="view" id="v-dash" hidden>
+  <button class="back" id="dashOut" type="button">&larr; Log out</button>
+  <h1 id="dashTitle">Dashboard</h1>
+  <div class="who" id="dashWho"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="list"></div>
+  <button class="btn ghost" id="csv" type="button">Download all (CSV)</button>
+  <p class="hint" id="dashNote"></p>
+</section>
+
+<section class="view" id="v-tjobs" hidden>
+  <button class="back" id="techOut" type="button">&larr; Log out</button>
+  <h1>My jobs</h1>
+  <div class="who" id="techWho"></div>
+  <div id="tlist"></div>
+  <p class="hint" id="tNote"></p>
+</section>
+
+</main>
+<nav class="anav" id="anav" hidden><div>
+<button type="button" data-p="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard<i class="bd" id="bd-dash" hidden></i></button>
+<button type="button" data-p="tech"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Technician<i class="bd" id="bd-tech" hidden></i></button>
+<button type="button" class="nw" data-p="new" id="nav-new"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>New</button>
+<button type="button" data-p="svc"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Services</button>
+<button type="button" data-p="txn"><svg viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Transactions<i class="bd" id="bd-txn" hidden></i></button>
+</div></nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ================= helpers =================
+var $=function(i){return document.getElementById(i)};
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function lc(x){return String(x||'').trim().toLowerCase()}
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtTime(v){var t=String(v||'00:00').split(':'),h=+t[0],ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+t[1]+' '+ap}
+function normPhone(v){var d=String(v||'').replace(/\D/g,'');if(d.indexOf('880')===0)d='0'+d.slice(3);return d}
+function okPhone(v){return /^01[3-9]\d{8}$/.test(normPhone(v))}
+function show(v){document.querySelectorAll('.view').forEach(function(s){s.hidden=s.id!=='v-'+v});window.scrollTo(0,0);
+  var on=!!window.isAdm&&(v==='dash'||v==='booking');var n=document.getElementById('anav');if(n)n.hidden=!on;document.body.classList.toggle('hasnav',on)}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b)show(b.dataset.go)});
+
+var WORK={not_yet:'Not yet',on_the_way:'On the way',working:'Working',complete:'Complete'};
+var sb=null;
+try{if(window.supabase&&typeof SUPABASE_URL!=='undefined'&&SUPABASE_URL.indexOf('YOUR')<0)sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)}catch(e){}
+if(!sb)$('setupMsg').textContent='Setup needed: add your Supabase URL and anon key in config.js.';
+
+function items(b){return (b.items&&b.items.length)?b.items:[{n:b.service,a:+b.price||0}]}
+function base(b){return items(b).reduce(function(t,x){return t+(+x.a||0)},0)}
+function bill(b){return Math.max(0,base(b)-(+b.discount||0))}
+
+// ================= catalog + booking form =================
+var CAT={
+ "Electrical":{"Wiring":["Room wiring","Conduit wiring","Concealed wiring","Rewiring","Short circuit fix","Cable fault fix"],"Fan":["Ceiling fan install","Fan repair","Regulator change","Exhaust fan install"],"Switch & socket":["Switch replace","Switch board install","Socket replace","Sparking socket fix"],"Lighting":["LED install","Panel light install","Tube light fix","Decor lighting"],"MCB & DB box":["MCB replace","MCB trip fix","DB box install","DB box repair"]},
+ "AC & Refrigerator":{"AC":["AC install","AC servicing","AC gas refill","AC repair","AC uninstall"],"Refrigerator":["Gas charge","Compressor repair","Thermostat replace","General repair"],"Freezer":["Freezer repair","Gas charge"]},
+ "Plumbing":{"Tap & mixer":["Tap replace","Mixer install","Tap leak fix"],"Pipe":["Pipe leak repair","Pipe replace","Blockage clear"],"Water tank & pump":["Pump repair","Pump install","Tank cleaning"],"Bathroom fittings":["Commode install","Basin install","Shower install"]},
+ "Home Appliance":{"Washing machine":["Washing machine repair","Installation","Drain pump replace"],"Microwave oven":["Microwave repair","Magnetron replace"],"Geyser":["Geyser install","Geyser repair"],"Water purifier":["Filter change","Servicing","Installation"]},
+ "Grill & Metal Work":{"Window grill":["New grill","Grill repair","Grill painting"],"Gate":["Gate fabrication","Gate repair"],"Shed & rack":["Shed fabrication","Rack fabrication"]}
+};
+function fill(l,a){l.innerHTML='';a.forEach(function(s){var o=document.createElement('option');o.value=s;l.appendChild(o)})}
+function keyOf(o,k){var t=lc(k);if(!t)return null;for(var x in o)if(lc(x)===t)return x;return null}
+function pick(o,k){var x=keyOf(o,k);return x===null?undefined:o[x]}
+fill($('catList'),Object.keys(CAT));
+var seq=0;
+function addBooking(){
+  seq++;var n=seq,c=document.createElement('div');c.className='bk';
+  c.innerHTML='<header><h2></h2><button type="button" class="rm">Remove</button></header>'+
+   '<div class="f"><label>Category</label><input class="cat" list="catList" placeholder="Select or type" autocomplete="off"></div>'+
+   '<div class="f"><label>Sub category</label><input class="sub" list="subL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="subL'+n+'"></datalist></div>'+
+   '<div class="f"><label>Service</label><input class="svc" list="svcL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="svcL'+n+'"></datalist></div>'+
+   '<div class="f"><label>Service price (optional)</label><div class="price"><span>৳</span><input class="price-in" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>'+
+   '<div class="f ok"><label>Booking date</label><input class="date" type="date" min="'+today()+'" value="'+today()+'"></div>'+
+   '<div class="f ok"><label>Booking time</label><input class="time" type="time" value="11:00"></div>';
+  $('bks').appendChild(c);
+  var q=function(s){return c.querySelector(s)};
+  function fSvc(){var m=pick(CAT,q('.cat').value)||{};fill($('svcL'+n),pick(m,q('.sub').value)||[])}
+  function fSub(){var m=pick(CAT,q('.cat').value)||{};fill($('subL'+n),Object.keys(m));fSvc()}
+  q('.cat').addEventListener('input',fSub);q('.sub').addEventListener('input',fSvc);
+  c.querySelectorAll('input').forEach(function(i){i.addEventListener('input',function(){i.classList.remove('bad');i.closest('.f').classList.toggle('ok',!!i.value.trim())})});
+  q('.rm').addEventListener('click',function(){c.remove();renumber()});
+  renumber();return c;
+}
+function renumber(){var cs=document.querySelectorAll('.bk');
+  cs.forEach(function(c,i){c.querySelector('h2').textContent='Booking '+(i+1);c.querySelector('.rm').style.display=cs.length>1?'':'none'});
+  $('go').textContent=cs.length>1?'Submit '+cs.length+' bookings':'Submit booking'}
+addBooking();
+$('add').addEventListener('click',function(){var c=addBooking();c.scrollIntoView({behavior:'smooth',block:'start'})});
+['name','addr','phone'].forEach(function(i){$(i).addEventListener('input',function(){$(i).classList.remove('bad');$(i).closest('.f').classList.toggle('ok',!!$(i).value.trim())})});
+
+$('go').addEventListener('click',async function(){
+  var err=$('bookErr');err.textContent='';$('phoneErr').textContent='';
+  var bad=null,mark=function(i){i.classList.add('bad');bad=bad||i};
+  ['name','addr'].forEach(function(i){if(!$(i).value.trim())mark($(i))});
+  if(!okPhone($('phone').value)){mark($('phone'));$('phoneErr').textContent='Enter a valid 11-digit number like 01XXXXXXXXX.'}
+  var rows=[];
+  document.querySelectorAll('.bk').forEach(function(c){
+    var q=function(s){return c.querySelector(s)};
+    ['.cat','.sub','.svc','.date','.time'].forEach(function(s){if(!q(s).value.trim())mark(q(s))});
+    rows.push({category:q('.cat').value.trim(),sub:q('.sub').value.trim(),service:q('.svc').value.trim(),price:+q('.price-in').value||0,date:q('.date').value,time:q('.time').value});
+  });
+  if(bad){bad.focus();return}
+  if(!sb){err.textContent='App is not connected to the database yet.';return}
+  var btn=$('go');btn.disabled=true;
+  var r=await sb.rpc('create_bookings',{p_customer:$('name').value.trim(),p_phone:normPhone($('phone').value),p_address:$('addr').value.trim(),p_rows:rows});
+  btn.disabled=false;
+  if(r.error){err.textContent='Could not submit. Please try again.';return}
+  var ids=$('ids');ids.innerHTML='';(r.data||[]).forEach(function(c){ids.appendChild(el('span','id',c))});
+  $('formView').style.display='none';$('doneView').style.display='block';window.scrollTo(0,0);
+});
+$('again').addEventListener('click',function(){
+  $('bks').innerHTML='';seq=0;addBooking();['name','addr','phone'].forEach(function(i){$(i).value='';$(i).closest('.f').classList.remove('ok')});
+  $('doneView').style.display='none';$('formView').style.display='block';
+});
+
+// ================= auth =================
+var me=null,channel=null;
+function msg(id,t,bad){var m=$(id);m.className='msg'+(bad?' bad':'');m.textContent=t}
+$('loginGo').addEventListener('click',async function(){
+  if(!sb)return msg('loginMsg','Setup needed: add your Supabase keys in config.js.',1);
+  var email=$('lEmail').value.trim(),pw=$('lPass').value;
+  if(!email||!pw)return msg('loginMsg','Enter your email and password.',1);
+  msg('loginMsg','Logging in...');
+  var r=await sb.auth.signInWithPassword({email:email,password:pw});
+  if(r.error)return msg('loginMsg','Wrong email or password.',1);
+  $('lPass').value='';await enter();
+});
+$('createGo').addEventListener('click',async function(){
+  if(!sb)return msg('createMsg','Setup needed: add your Supabase keys in config.js.',1);
+  var n=$('cName').value.trim(),p=$('cPhone').value,e=$('cEmail').value.trim(),a=$('cPass').value,b=$('cPass2').value;
+  if(!n||!e)return msg('createMsg','Name and email are required.',1);
+  if(!okPhone(p))return msg('createMsg','Enter a valid 11-digit phone number.',1);
+  if(a.length<8)return msg('createMsg','Password must be at least 8 characters.',1);
+  if(a!==b)return msg('createMsg','Passwords do not match.',1);
+  var r=await sb.auth.signUp({email:e,password:a,options:{data:{name:n,phone:normPhone(p)}}});
+  if(r.error)return msg('createMsg',r.error.message,1);
+  ['cName','cPhone','cEmail','cPass','cPass2'].forEach(function(i){$(i).value=''});
+  msg('createMsg','Account created. You can log in after the admin approves it.');
+});
+async function enter(){
+  var s=await sb.auth.getSession();if(!s.data.session)return;
+  var r=await sb.from('profiles').select('*').eq('id',s.data.session.user.id).maybeSingle();
+  me=r.data;
+  if(me&&me.role==='admin')return startAdmin();
+  if(me&&me.role==='technician')return startTech();
+  await sb.auth.signOut();me=null;show('login');
+  msg('loginMsg','Your account is waiting for admin approval.',1);
+}
+async function logout(){window.isAdm=false;$('bkBack').dataset.go='home';if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
+$('dashOut').addEventListener('click',logout);$('techOut').addEventListener('click',logout);
+function listen(fn){if(channel)sb.removeChannel(channel);
+  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).subscribe()}
+$('anav').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;
+  if(b.dataset.p==='new'){$('bkBack').dataset.go='dash';document.querySelectorAll('#anav [data-p]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});show('booking');return}
+  page=b.dataset.p;show('dash');renderAdmin()});
+if(sb){enter();loadServices()}
+
+// ================= bill sheet =================
+function billSheet(b,admin,done){
+  var list=items(b).map(function(x){return {n:x.n,a:+x.a||0}}),disc=+b.discount||0;
+  var sh=el('div','sheet'),f=el('form'),rows=el('div'),tot=el('p','bl'),err=el('div','err');f.noValidate=true;f.onsubmit=function(e){e.preventDefault()};
+  f.appendChild(el('h2','',(admin?'Bill — ':'Work and bill — ')+b.code));f.appendChild(rows);
+  function sum(){return list.reduce(function(t,x){return t+(+x.a||0)},0)}
+  function upd(){tot.textContent='Total ৳ '+Math.max(0,sum()-disc)}
+  function draw(){rows.innerHTML='';list.forEach(function(x,i){
+    var w=el('div','sf'),nI=document.createElement('input'),aI=document.createElement('input'),rm=el('button','sb','Remove');
+    nI.placeholder='Work item';nI.value=x.n;nI.oninput=function(){x.n=nI.value};
+    aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='৳ amount';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
+    rm.type='button';rm.style.marginTop='8px';rm.onclick=function(){if(list.length>1){list.splice(i,1);draw();upd()}};
+    w.appendChild(nI);w.appendChild(aI);if(list.length>1)w.appendChild(rm);rows.appendChild(w)})}
+  draw();
+  var add=el('button','btn ghost','+ Add work item');add.type='button';add.onclick=function(){list.push({n:'',a:0});draw();upd()};f.appendChild(add);
+  if(admin){var w=el('div','sf');w.style.marginTop='14px';var dI=document.createElement('input');dI.type='number';dI.min=0;dI.inputMode='decimal';dI.value=disc;
+    dI.oninput=function(){disc=+dI.value||0;upd()};w.appendChild(el('label','','Discount (৳)'));w.appendChild(dI);f.appendChild(w)}
+  var sv=el('button','btn','💾 Save bill'),cn=el('button','btn ghost','Cancel');sv.type=cn.type='button';
+  cn.onclick=function(){sh.remove()};sh.onclick=function(e){if(e.target===sh)sh.remove()};
+  sv.onclick=async function(){
+    if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every work item needs a name.';return}
+    if(disc>sum()){err.textContent='Discount cannot be more than the total.';return}
+    // FIX: price column-ও আপডেট হবে (আগে শুধু items আর discount আপডেট হতো)
+    var d={items:list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0}}),price:sum()};if(admin)d.discount=disc;
+    var r=await sb.from('bookings').update(d).eq('id',b.id);
+    if(r.error){err.textContent='Could not save. Try again.';return}
+    sh.remove();if(done)done();
+  };
+  upd();f.appendChild(tot);f.appendChild(err);f.appendChild(sv);f.appendChild(cn);sh.appendChild(f);document.body.appendChild(sh);
+}
+
+// ================= invoice (PDF) =================
+function invoice(b){
+  var J=window.jspdf;if(!J){alert('PDF library did not load. Check your internet.');return}
+  var d=new J.jsPDF({unit:'mm',format:'a4'}),y=20,L=18,R=192;
+  d.setFont('helvetica','bold');d.setFontSize(22);d.text('HomeFix',L,y);
+  d.setFontSize(12);d.text('INVOICE',R,y,{align:'right'});y+=8;
+  d.setFont('helvetica','normal');d.setFontSize(10);d.text('homefix.live',L,y);
+  d.text('Invoice no: '+b.code,R,y,{align:'right'});y+=5;
+  d.text('Date: '+(b.booking_date||today()),R,y,{align:'right'});y+=10;
+  d.setDrawColor(150);d.line(L,y,R,y);y+=8;
+  d.setFont('helvetica','bold');d.text('Billed to',L,y);y+=6;
+  d.setFont('helvetica','normal');
+  [b.customer,b.phone,b.address].forEach(function(t){d.splitTextToSize(String(t||''),R-L).forEach(function(s){d.text(s,L,y);y+=5})});
+  y+=3;d.text('Service: '+[b.category,b.sub,b.service].filter(Boolean).join(' / '),L,y);y+=10;
+  d.setFont('helvetica','bold');d.text('Work item',L,y);d.text('Amount (Tk)',R,y,{align:'right'});y+=3;d.line(L,y,R,y);y+=6;
+  d.setFont('helvetica','normal');
+  items(b).forEach(function(x){
+    if(y>265){d.addPage();y=20}
+    var ls=d.splitTextToSize(String(x.n),120);d.text(ls,L,y);d.text(String(+x.a||0),R,y,{align:'right'});y+=5*ls.length+2});
+  y+=2;d.line(L,y,R,y);y+=7;
+  d.text('Subtotal',L,y);d.text(String(base(b)),R,y,{align:'right'});y+=6;
+  if(+b.discount){d.text('Discount',L,y);d.text('- '+(+b.discount),R,y,{align:'right'});y+=6}
+  d.setFont('helvetica','bold');d.setFontSize(12);d.text('Total',L,y);d.text('Tk '+bill(b),R,y,{align:'right'});y+=14;
+  d.setFont('helvetica','normal');d.setFontSize(9);d.text('Thank you for choosing HomeFix.',L,y);
+  d.save('HomeFix-invoice-'+b.code+'.pdf');
+}
+
+// ================= admin =================
+var bks=[],users=[],tab='new',page='dash';
+var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled']];
+function startAdmin(){
+  window.isAdm=true;page='dash';show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
+  loadAdmin();listen(loadAdmin);
+}
+async function loadAdmin(){
+  var a=await sb.from('bookings').select('*').order('created_at',{ascending:false});
+  var u=await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  if(a.error||u.error){$('dashNote').textContent='Could not load data.';return}
+  var dp=await sb.from('acc_deposits').select('*').order('created_at',{ascending:false});var xp=await sb.from('acc_expenses').select('*').order('created_at',{ascending:false});
+  accDeps=dp.data||[];accExps=xp.data||[];
+  bks=a.data||[];users=u.data||[];$('dashNote').textContent=(dp.error||xp.error)?'Hisab tables missing: run the SQL in Supabase.':'';renderAdmin();
+}
+function inTab(b,t){
+  if(t==='new')return b.status==='pending';
+  if(t==='active')return b.status==='confirmed'&&b.work_status!=='complete';
+  if(t==='done')return b.status==='confirmed'&&b.work_status==='complete';
+  if(t==='cancelled')return b.status==='cancelled';
+}
+function techName(id){var u=users.filter(function(x){return x.id===id})[0];return u?((u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)):'—'}
+function card(b){
+  var c=el('div','bc'),r=el('div','rw');
+  r.appendChild(el('b','',b.code));
+  var label=b.status==='confirmed'?WORK[b.work_status]:(b.status==='pending'?'New':'Cancelled');
+  r.appendChild(el('span','chip'+(b.status==='pending'?' new':b.work_status==='complete'&&b.status==='confirmed'?' ok':''),label));
+  c.appendChild(r);c.appendChild(el('div','nm',b.customer));
+  var p=el('p'),a=el('a','',b.phone);a.href='tel:'+String(b.phone).replace(/[^\d+]/g,'');p.appendChild(a);c.appendChild(p);
+  c.appendChild(el('p','',b.address));
+  c.appendChild(el('p','',[b.category,b.sub,b.service].filter(Boolean).join(' / ')));
+  c.appendChild(el('p','',b.booking_date+', '+fmtTime(b.booking_time)));
+  if(b.tech_id)c.appendChild(el('p','','Technician: '+techName(b.tech_id)));
+  c.appendChild(el('p','bl','Bill ৳ '+bill(b)+(+b.discount?' (discount ৳ '+(+b.discount)+')':'')));
+  return c;
+}
+function techSelect(b){
+  var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Technician'));
+  var o0=el('option','','Select technician');o0.value='';s.appendChild(o0);
+  users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
+  w.appendChild(s);w._s=s;return w;
+}
+async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
+function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
+function renderNav(){
+  document.querySelectorAll('#anav [data-p]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.p===page)});
+  var set=function(id,n){var e=$(id);e.textContent=n;e.hidden=!n};
+  set('bd-dash',bks.filter(function(b){return inTab(b,'new')}).length);
+  set('bd-tech',users.filter(function(u){return u.role==='pending'}).length);
+  set('bd-txn',accDeps.filter(function(d){return d.status==='pending'}).length);
+}
+var svcRows=[],svcErr='',svcOpen={};
+function buildCat(rows){var c={};rows.forEach(function(r){c[r.category]=c[r.category]||{};(c[r.category][r.sub]=c[r.category][r.sub]||[]).push(r.name)});return c}
+async function loadServices(){
+  if(!sb)return;
+  var r=await sb.from('services').select('*').order('id');
+  if(r.error){svcErr=r.error.message;return}
+  svcErr='';svcRows=r.data||[];
+  if(svcRows.length)CAT=buildCat(svcRows);
+  fill($('catList'),Object.keys(CAT));
+}
+async function svcDo(p){var x=await p;if(x.error){$('dashNote').textContent='Could not save: '+x.error.message;return}
+  $('dashNote').textContent='';await loadServices();renderAdmin()}
+function svcAsk(msg,cur){var v=prompt(msg,cur||'');if(v===null)return null;v=v.trim();return v||null}
+function renderSvc(L){
+  if(svcErr)L.appendChild(el('p','err','Services table not ready. Run homefix_services.sql in Supabase. ('+svcErr+')'));
+  if(!svcRows.length){
+    var c=el('div','bc');c.appendChild(el('b','','Service list is not in the database yet'));
+    c.appendChild(el('p','','Save the current default list once, then you can add, edit and delete from here.'));
+    var ac=el('div','acts');
+    ac.appendChild(btn('Save default list','pri',function(){
+      var rows=[];Object.keys(CAT).forEach(function(k){Object.keys(CAT[k]).forEach(function(m){CAT[k][m].forEach(function(n){rows.push({category:k,sub:m,name:n})})})});
+      svcDo(sb.from('services').upsert(rows,{onConflict:'category,sub,name',ignoreDuplicates:true}))}));
+    c.appendChild(ac);L.appendChild(c);return;
+  }
+  var f=el('div','bc');f.appendChild(el('b','','Add service'));
+  var ic=accField('input','Category'),is=accField('input','Sub category'),inn=accField('input','Service name');
+  ic.setAttribute('list','catList');is.setAttribute('list','subAdm');
+  var dl=document.createElement('datalist');dl.id='subAdm';
+  ic.oninput=function(){var m=pick(CAT,ic.value)||{};fill(dl,Object.keys(m))};
+  f.appendChild(ic);f.appendChild(is);f.appendChild(dl);f.appendChild(inn);
+  var fa=el('div','acts');
+  fa.appendChild(btn('Add','pri',function(){
+    var k=ic.value.trim(),m=is.value.trim(),n=inn.value.trim();
+    if(!k||!m||!n){$('dashNote').textContent='Fill category, sub category and service name.';return}
+    svcOpen[k]=true;svcDo(sb.from('services').upsert([{category:k,sub:m,name:n}],{onConflict:'category,sub,name',ignoreDuplicates:true}))}));
+  f.appendChild(fa);L.appendChild(f);
+  L.appendChild(el('p','hint',Object.keys(CAT).length+' categories, '+svcRows.length+' services'));
+  Object.keys(CAT).forEach(function(k){
+    var d=document.createElement('details');d.className='bc';d.open=!!svcOpen[k];
+    d.addEventListener('toggle',function(){svcOpen[k]=d.open});
+    var sm=el('summary','',k);sm.style.fontWeight='700';d.appendChild(sm);
+    var ca=el('div','acts');
+    ca.appendChild(btn('Rename','',function(){var v=svcAsk('Rename category',k);if(v&&v!==k){svcOpen[v]=true;svcDo(sb.from('services').update({category:v}).eq('category',k))}}));
+    ca.appendChild(btn('Delete','del',function(){if(confirm('Delete category "'+k+'" and all its services?'))svcDo(sb.from('services').delete().eq('category',k))}));
+    d.appendChild(ca);
+    Object.keys(CAT[k]).forEach(function(m){
+      d.appendChild(el('div','nm',m));
+      var sa=el('div','acts');sa.style.marginTop='6px';
+      sa.appendChild(btn('Rename','',function(){var v=svcAsk('Rename sub category',m);if(v&&v!==m)svcDo(sb.from('services').update({sub:v}).eq('category',k).eq('sub',m))}));
+      sa.appendChild(btn('Delete','del',function(){if(confirm('Delete "'+m+'" and its services?'))svcDo(sb.from('services').delete().eq('category',k).eq('sub',m))}));
+      sa.appendChild(btn('+ Add here','',function(){ic.value=k;is.value=m;ic.oninput();inn.focus();window.scrollTo(0,0)}));
+      d.appendChild(sa);
+      svcRows.filter(function(r){return r.category===k&&r.sub===m}).forEach(function(r){
+        var row=el('div','rw');row.style.marginTop='10px';row.appendChild(el('span','',r.name));
+        var ra=el('div','acts');ra.style.marginTop='0';
+        ra.appendChild(btn('Edit','',function(){var v=svcAsk('Edit service name',r.name);if(v&&v!==r.name)svcDo(sb.from('services').update({name:v}).eq('id',r.id))}));
+        ra.appendChild(btn('Delete','del',function(){if(confirm('Delete "'+r.name+'"?'))svcDo(sb.from('services').delete().eq('id',r.id))}));
+        row.appendChild(ra);d.appendChild(row)});
+    });
+    L.appendChild(d);
+  });
+}
+function renderAdmin(){
+  var T=$('tabs');T.innerHTML='';var L=$('list');L.innerHTML='';
+  document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
+  $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions'}[page];
+  $('csv').style.display=page==='dash'?'':'none';
+  renderNav();
+  if(page==='tech')return renderTeam(L);
+  if(page==='txn')return renderHisab(L);
+  if(page==='svc')return renderSvc(L);
+  var tiles=el('div','tiles'),todayInc=sumOf(accDone(bks).filter(function(b){return b.booking_date===today()}),bill);
+  [['New bookings',bks.filter(function(b){return inTab(b,'new')}).length,function(){tab='new';renderAdmin()}],
+   ['Active jobs',bks.filter(function(b){return inTab(b,'active')}).length,function(){tab='active';renderAdmin()}],
+   ['Income today',tk(todayInc),function(){page='txn';renderAdmin()}],
+   ['Deposits to confirm',accDeps.filter(function(d){return d.status==='pending'}).length,function(){page='txn';renderAdmin()}]
+  ].forEach(function(t){var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=t[2];tiles.appendChild(x)});
+  T.parentNode.insertBefore(tiles,T);
+  TABS.forEach(function(t){
+    var n=bks.filter(function(b){return inTab(b,t[0])}).length;
+    var x=el('button','tab',t[1]+(n?' ('+n+')':''));x.type='button';x.setAttribute('aria-pressed',tab===t[0]);x.onclick=function(){tab=t[0];renderAdmin()};T.appendChild(x)});
+  var rows=bks.filter(function(b){return inTab(b,tab)});
+  if(!rows.length)L.appendChild(el('p','hint','Nothing here yet.'));
+  rows.forEach(function(b){
+    var c=card(b),ac=el('div','acts'),ts;
+    if(b.status==='pending'){
+      ts=techSelect(b);c.appendChild(ts);
+      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}upd(b.id,{status:'confirmed',tech_id:ts._s.value})}));
+      ac.appendChild(btn('Cancel','del',function(){upd(b.id,{status:'cancelled'})}));
+    }else if(b.status==='confirmed'){
+      ts=techSelect(b);c.appendChild(ts);
+      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value})}));
+      ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
+      ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+      ac.appendChild(btn('Cancel','del',function(){if(confirm('Cancel this booking?'))upd(b.id,{status:'cancelled'})}));
+    }else{
+      ac.appendChild(btn('Reopen','',function(){upd(b.id,{status:'pending'})}));
+      ac.appendChild(btn('Delete','del',async function(){if(!confirm('Delete permanently?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)$('dashNote').textContent='Could not delete.';else loadAdmin()}));
+    }
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+function renderTeam(L){
+  var rows=users.filter(function(u){return u.role!=='admin'});
+  if(!rows.length)L.appendChild(el('p','hint','No users yet. New sign-ups appear here for approval.'));
+  rows.forEach(function(u){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',u.name||u.email));
+    r.appendChild(el('span','chip'+(u.role==='pending'?' new':''),u.role==='pending'?'Waiting':(u.tech_code||'Technician')));
+    c.appendChild(r);c.appendChild(el('p','',u.email));if(u.phone)c.appendChild(el('p','',u.phone));
+    var ac=el('div','acts');
+    if(u.role==='technician'){
+      var bl=accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));
+      c.appendChild(el('p','bl',bl>=0?'Owes company '+tk(bl):'Company owes '+tk(-bl)));
+      c.appendChild(el('p','','Commission '+accPct(u.id)+'%'));
+      ac.appendChild(btn('Commission %','',async function(){
+        var v=prompt('Commission % for this technician',accPct(u.id));if(v===null)return;v=+v;
+        if(!(v>=0&&v<=100)){alert('Enter 0 to 100');return}
+        var x=await sb.from('profiles').update({commission_pct:v}).eq('id',u.id);
+        if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
+      if(bl<0)ac.appendChild(btn('Paid out','pri',async function(){
+        var x=await sb.from('acc_deposits').insert({technician_id:u.id,kind:'payout',amount:-bl,method:'Admin',status:'confirmed'});
+        if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+    }
+    var set=function(role){return async function(){var x=await sb.from('profiles').update({role:role}).eq('id',u.id);if(x.error)$('dashNote').textContent='Could not update user.';else loadAdmin()}};
+    if(u.role==='pending')ac.appendChild(btn('Approve as technician','pri',set('technician')));
+    else ac.appendChild(btn('Remove access','del',set('pending')));
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+$('csv').addEventListener('click',function(){
+  var q=function(v,p){var s=String(v==null?'':v).replace(/"/g,'""');if(p)s='="'+s+'"';else s='"'+s+'"';return s};
+  var out=['Code,Customer,Phone,Address,Category,Sub category,Service,Price,Discount,Bill,Date,Time,Technician,Status,Work status,Work items'];
+  bks.forEach(function(b){out.push([q(b.code),q(b.customer),q(b.phone,1),q(b.address),q(b.category),q(b.sub),q(b.service),base(b),+b.discount||0,bill(b),q(b.booking_date),q(b.booking_time),q(techName(b.tech_id)),q(b.status),q(WORK[b.work_status]),q(items(b).map(function(x){return x.n+' '+x.a}).join('; '))].join(','))});
+  var blob=new Blob(['\ufeff'+out.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='homefix-bookings.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
+});
+
+// ================= technician =================
+var tJobs=[];
+function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.tech_code?me.tech_code+' · ':'')+(me.name||me.email);loadTech();listen(loadTech)}
+async function loadTech(){
+  var r=await sb.from('bookings').select('*').eq('tech_id',me.id).eq('status','confirmed');
+  if(r.error){$('tNote').textContent='Could not load your jobs.';return}
+  var dp=await sb.from('acc_deposits').select('*').eq('technician_id',me.id).order('created_at',{ascending:false});accDeps=dp.data||[];
+  tJobs=r.data||[];$('tNote').textContent=dp.error?'Hisab tables missing: ask admin.':'';renderTech();
+}
+function renderTech(){
+  var L=$('tlist');L.innerHTML='';renderTechAcc(L);
+  var rows=tJobs.slice().sort(function(a,b){var ad=a.work_status==='complete',bd=b.work_status==='complete';return (ad-bd)||String(a.booking_date+a.booking_time).localeCompare(String(b.booking_date+b.booking_time))});
+  if(!rows.length)L.appendChild(el('p','hint','No jobs assigned yet.'));
+  rows.forEach(function(b){
+    var c=card(b),w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
+    Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
+    s.onchange=async function(){
+      var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
+      if(r.error){$('tNote').textContent='Could not update status.';return}
+      await loadTech();
+      if(s.value==='complete'&&!(b.items&&b.items.length)){var nb=tJobs.filter(function(x){return x.id===b.id})[0];if(nb)billSheet(nb,false,loadTech)}
+    };
+    w.appendChild(s);c.appendChild(w);
+    var ac=el('div','acts');
+    ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
+    ac.appendChild(btn('Invoice','',function(){invoice(b)}));
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+
+// ================= HISAB (accounts) =================
+var accDeps=[],accExps=[],accRange='month';
+function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
+function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
+function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
+function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
+function accPct(id){var u=(me&&id===me.id)?me:users.filter(function(x){return x.id===id})[0];return u&&u.commission_pct!=null?+u.commission_pct:60}
+function accComm(b){return Math.round(bill(b)*accPct(b.tech_id))/100}
+function accColl(b){return b.pay_mode==='online'?0:bill(b)}
+// positive = technician owes company, negative = company owes technician
+function accBal(jobs,deps){
+  return sumOf(jobs,accColl)-sumOf(jobs,accComm)
+   -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
+   +sumOf(deps.filter(function(d){return d.kind==='payout'&&d.status==='confirmed'}),function(d){return d.amount});
+}
+function accTabs(fn){
+  var T=el('div','tabs');
+  [['today','Today'],['month','This month'],['all','All']].forEach(function(r){
+    var x=el('button','tab',r[1]);x.type='button';x.setAttribute('aria-pressed',accRange===r[0]);
+    x.onclick=function(){accRange=r[0];fn()};T.appendChild(x)});
+  return T;
+}
+function accSum(rows){
+  var s=el('div','sum');
+  rows.forEach(function(r){var d=el('div');d.appendChild(el('span','',r[0]));var b=el('b','',r[1]);if(r[2])b.style.color=r[2];d.appendChild(b);s.appendChild(d)});
+  return s;
+}
+function accField(tag,ph,type){var i=document.createElement(tag);if(type)i.type=type;if(ph)i.placeholder=ph;i.style.marginTop='8px';return i}
+function accSel(list){var s=accField('select');list.forEach(function(v){var o=el('option','',v);o.value=v;s.appendChild(o)});return s}
+
+function renderHisab(L){
+  var tools=el('div','tool-strip');
+  [['🔧','Tools'],['⚡','Electrical'],['🚿','Plumbing'],['❄️','AC & Fridge']].forEach(function(x){
+    var s=el('span');s.appendChild(document.createTextNode(x[0]+' '+x[1]));tools.appendChild(s);
+  });
+  L.appendChild(tools);
+  var hh=el('div','hisab-head');hh.appendChild(el('h2','', '💰 হিসাব খাতা'));hh.appendChild(el('span','badge','LIVE'));
+  L.appendChild(hh);
+  L.appendChild(accTabs(renderAdmin));
+  var all=accDone(bks),jobs=all.filter(function(b){return accInD(b.booking_date)});
+  var exps=accExps.filter(function(e){return accInD(e.exp_date||e.created_at)});
+  var inc=sumOf(jobs,bill),cm=sumOf(jobs,accComm),ex=sumOf(exps,function(e){return e.amount}),net=inc-cm-ex;
+  L.appendChild(accSum([['Income',tk(inc)],['Technician commission',tk(cm)],['Other expense',tk(ex)],['Net profit',tk(net),net<0?'var(--err)':null]]));
+
+  var pend=accDeps.filter(function(d){return d.status==='pending'});
+  if(pend.length){
+    L.appendChild(el('h2','','Deposits to confirm'));
+    pend.forEach(function(d){
+      var c=el('div','bc');c.appendChild(el('b','',techName(d.technician_id)+' · '+tk(d.amount)));
+      c.appendChild(el('p','hint',(d.method||'')+' '+(d.trx_id||'')));
+      var ac=el('div','acts');
+      ac.appendChild(btn('Confirm','pri',function(){accSet(d.id,'confirmed')}));
+      ac.appendChild(btn('Reject','del',function(){accSet(d.id,'rejected')}));
+      c.appendChild(ac);L.appendChild(c)});
+  }
+
+  L.appendChild(el('h2','','Add expense'));
+  var f=el('div','bc'),cat=accSel(['Parts / Material','Transport','Marketing','Office','Other']),amt=accField('input','Amount','number'),note=accField('input','Note');
+  amt.inputMode='numeric';
+  f.appendChild(cat);f.appendChild(amt);f.appendChild(note);
+  var ac=el('div','acts');
+  ac.appendChild(btn('Save expense','pri',async function(){
+    if(!(+amt.value>0)){$('dashNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_expenses').insert({category:cat.value,amount:+amt.value,note:note.value.trim()});
+    if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
+  f.appendChild(ac);L.appendChild(f);
+  exps.slice(0,15).forEach(function(e){L.appendChild(el('p','hint',(e.exp_date||'')+' · '+e.category+' · '+tk(e.amount)+(e.note?' · '+e.note:'')))});
+
+  L.appendChild(el('h2','','Completed jobs ('+jobs.length+')'));
+  jobs.forEach(function(b){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',b.code+' · '+b.customer));r.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));c.appendChild(r);
+    c.appendChild(el('p','hint',b.booking_date+' · '+techName(b.tech_id)));
+    c.appendChild(el('p','bl','Bill '+tk(bill(b))+' · Commission '+tk(accComm(b))));
+    var ac=el('div','acts');
+    ac.appendChild(btn(b.pay_mode==='online'?'Mark as cash':'Mark as online (paid to company)','',async function(){
+      var x=await sb.from('bookings').update({pay_mode:b.pay_mode==='online'?'cash':'online'}).eq('id',b.id);
+      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+    c.appendChild(ac);L.appendChild(c)});
+}
+function editExpense(e,card){
+  if(card.classList.contains('editing'))return;
+  card.classList.add('editing');card.innerHTML='';
+  var h=el('b','','✏️ Edit expense');
+  var cat=accSel(['Parts / Material','Transport','Marketing','Office','Other']);cat.value=e.category||'Other';
+  var amt=accField('input','Amount','number');amt.value=e.amount||0;amt.inputMode='numeric';
+  var note=accField('input','Note');note.value=e.note||'';
+  var ac=el('div','acts');
+  ac.appendChild(btn('Save','pri',async function(){
+    if(!(+amt.value>0)){$('dashNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_expenses').update({category:cat.value,amount:+amt.value,note:note.value.trim()}).eq('id',e.id);
+    if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin();
+  }));
+  ac.appendChild(btn('Cancel','',function(){renderAdmin()}));
+  card.appendChild(h);card.appendChild(cat);card.appendChild(amt);card.appendChild(note);card.appendChild(ac);
+}
+async function accSet(id,status){var x=await sb.from('acc_deposits').update({status:status}).eq('id',id);if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}
+
+function renderTechAcc(L){
+  var all=accDone(tJobs),jobs=all.filter(function(b){return accInD(b.booking_date)});
+  var bal=accBal(all,accDeps),pend=sumOf(accDeps.filter(function(d){return d.kind==='joma'&&d.status==='pending'}),function(d){return d.amount});
+  var box=el('div');box.appendChild(el('h2','','My income'));box.appendChild(accTabs(renderTech));
+  box.appendChild(accSum([['Jobs done',String(jobs.length)],['My commission',tk(sumOf(jobs,accComm))],['Cash collected',tk(sumOf(jobs,accColl))],
+    [bal>=0?'I must deposit (Due)':'Company owes me',tk(Math.abs(bal)),bal>0?'var(--err)':null]]));
+  if(pend)box.appendChild(el('p','hint','Waiting for admin to confirm: '+tk(pend)));
+  var f=el('div','bc'),amt=accField('input','Amount deposited','number'),m=accSel(['bKash','Nagad','Cash']),t=accField('input','Transaction ID');
+  amt.inputMode='numeric';f.appendChild(amt);f.appendChild(m);f.appendChild(t);
+  var ac=el('div','acts');
+  ac.appendChild(btn('I deposited','pri',async function(){
+    if(!(+amt.value>0)){$('tNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_deposits').insert({technician_id:me.id,kind:'joma',amount:+amt.value,method:m.value,trx_id:t.value.trim()});
+    if(x.error)$('tNote').textContent='Could not save: '+x.error.message;else loadTech()}));
+  f.appendChild(ac);box.appendChild(f);
+  accDeps.slice(0,8).forEach(function(d){box.appendChild(el('p','hint',new Date(d.created_at).toLocaleDateString()+' · '+(d.kind==='joma'?'Deposited ':'Company paid ')+tk(d.amount)+' · '+d.status))});
+  box.appendChild(el('h2','','My jobs'));
+  L.appendChild(box);
+}
+</script>
+</body>
+</html>
