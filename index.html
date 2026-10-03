@@ -1182,5 +1182,416 @@ function renderTechAcc(L){
   L.appendChild(box);
 }
 </script>
+<style id="homefix-smart-overrides">
+/* ===== HomeFix Smart Final UI ===== */
+:root{
+  --smart-bg:#0c2925;
+  --smart-card:#123b35;
+  --smart-card2:#16443d;
+  --smart-line:#3b7168;
+  --smart-mint:#54bda7;
+  --smart-mint2:#8ed7c8;
+  --smart-white:#f5fbf9;
+  --smart-muted:#a9c2bc;
+  --smart-danger:#ef8f8f;
+}
+body{
+  background:#0b2723 !important;
+  color:var(--smart-white) !important;
+}
+body::before{
+  opacity:.18 !important;
+  background-image:
+    radial-gradient(circle at 12% 18%,rgba(84,189,167,.10) 0 2px,transparent 3px),
+    radial-gradient(circle at 86% 42%,rgba(142,215,200,.08) 0 2px,transparent 3px);
+}
+#list{position:relative}
+.smart-tools-bg{
+  position:fixed;inset:170px 0 78px;pointer-events:none;z-index:0;
+  overflow:hidden;opacity:.17;
+}
+.smart-tools-bg span{
+  position:absolute;font-size:52px;filter:grayscale(.1);
+  transform:rotate(var(--r));
+}
+.smart-tools-bg span:nth-child(1){left:4%;top:5%;--r:-14deg}
+.smart-tools-bg span:nth-child(2){right:8%;top:16%;--r:18deg}
+.smart-tools-bg span:nth-child(3){left:38%;top:28%;--r:-9deg}
+.smart-tools-bg span:nth-child(4){right:22%;top:44%;--r:14deg}
+.smart-tools-bg span:nth-child(5){left:8%;top:58%;--r:8deg}
+.smart-tools-bg span:nth-child(6){right:4%;top:72%;--r:-17deg}
+.smart-tools-bg span:nth-child(7){left:45%;top:82%;--r:12deg}
+.smart-tools-bg span:nth-child(8){left:18%;top:38%;--r:-20deg}
+#list>*{position:relative;z-index:1}
+.smart-summary{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0;
+}
+.smart-stat{
+  background:linear-gradient(145deg,var(--smart-card2),var(--smart-card));
+  border:1px solid var(--smart-line);border-radius:14px;padding:11px 10px;
+}
+.smart-stat small{display:block;color:var(--smart-muted);font-size:11px}
+.smart-stat b{display:block;font-size:18px;margin-top:3px;color:#fff}
+.smart-stat.net b{color:var(--smart-mint2)}
+.smart-period,.smart-filter{
+  display:flex;gap:6px;overflow:auto;margin:8px 0;padding-bottom:2px;
+}
+.smart-period button,.smart-filter button{
+  flex:0 0 auto;border:1px solid var(--smart-line);background:#12352f;
+  color:#d7e8e3;border-radius:10px;padding:8px 11px;font-weight:700;font-size:12px;
+}
+.smart-period button.on,.smart-filter button.on{background:var(--smart-mint);color:#07312a;border-color:var(--smart-mint)}
+.smart-search{
+  width:100%;box-sizing:border-box;background:#102f2b;border:1px solid var(--smart-line);
+  color:#fff;border-radius:11px;padding:10px 12px;font-size:13px;outline:none;margin:6px 0;
+}
+.smart-search::placeholder{color:#8faea7}
+.smart-add{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#10332e;border:1px solid var(--smart-line);
+  border-radius:14px;padding:10px;margin:8px 0;
+}
+.smart-add select,.smart-add input,.smart-add textarea{
+  width:100%;box-sizing:border-box;background:#0d2b27;color:#fff;border:1px solid #3d766c;
+  border-radius:9px;padding:9px;font-size:12px;
+}
+.smart-add .wide{grid-column:1/-1}
+.smart-add .save{grid-column:1/-1;background:var(--smart-mint);color:#07312a;border:0;font-weight:800}
+.smart-row{
+  display:grid;grid-template-columns:1.15fr 1fr .8fr auto;gap:7px;align-items:center;
+  background:#123a34;border:1px solid #35665e;border-radius:12px;padding:9px 10px;margin:7px 0;
+  font-size:11px;
+}
+.smart-row .main b{display:block;font-size:12px;color:#fff}
+.smart-row .main small{display:block;color:var(--smart-muted);margin-top:2px}
+.smart-row .money{font-size:13px;font-weight:800}
+.smart-row .in{color:#8ed7c8}.smart-row .out{color:#ffaaa4}
+.smart-chip{display:inline-block;border-radius:999px;padding:5px 7px;background:#24554d;color:#d8eee8;font-size:10px;font-weight:700}
+.smart-menu{display:flex;gap:4px;justify-content:flex-end}
+.smart-menu button{border:1px solid #487c73;background:#143b35;color:#eaf7f3;border-radius:7px;padding:6px 7px;font-size:10px}
+.smart-menu .danger{border-color:#a75b5b;color:#ffb1b1}
+.smart-section-title{
+  display:flex;justify-content:space-between;align-items:center;margin:15px 0 7px;
+}
+.smart-section-title h3{margin:0;font-size:17px}
+.smart-section-title span{font-size:10px;color:var(--smart-muted)}
+.smart-work{
+  background:#123a34;border:1px solid #356b62;border-radius:13px;padding:10px;margin:7px 0;
+}
+.smart-work .top{display:flex;justify-content:space-between;gap:8px}
+.smart-work b{font-size:13px}.smart-work small{color:var(--smart-muted)}
+.smart-work .meta{font-size:11px;color:#c0d6d1;margin-top:5px;line-height:1.5}
+.smart-actions{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.smart-actions button{border:1px solid #4b8178;background:#173f39;color:#fff;border-radius:8px;padding:6px 8px;font-size:10px;font-weight:700}
+.smart-actions .primary{background:var(--smart-mint);color:#07312a;border-color:var(--smart-mint)}
+.smart-actions .danger{border-color:#a75b5b;color:#ffb1b1}
+.tech-profile{
+  background:linear-gradient(145deg,#17453e,#11352f);border:1px solid #4a8177;border-radius:16px;padding:13px;margin:8px 0;
+}
+.tech-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.tech-head b{font-size:16px}.tech-head small{color:var(--smart-muted)}
+.tech-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:9px}
+.tech-stat{background:#0e302b;border:1px solid #2f6259;border-radius:10px;padding:8px}
+.tech-stat small{display:block;color:var(--smart-muted);font-size:9px}.tech-stat b{font-size:14px}
+.salary-box{margin-top:9px;padding:10px;border-radius:11px;background:#0e302b;border:1px solid #315f57}
+.salary-row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:#c5d9d4}
+.salary-row.total{border-top:1px solid #315f57;margin-top:4px;padding-top:7px;color:#fff;font-weight:800}
+@media(max-width:430px){
+  .smart-row{grid-template-columns:1.1fr .85fr auto;}.smart-row .way{display:none}
+  .smart-add{grid-template-columns:1fr}
+  .smart-add .wide,.smart-add .save{grid-column:auto}
+  .smart-summary{gap:5px}.smart-stat{padding:9px 7px}.smart-stat b{font-size:16px}
+}
+</style>
+
+<script id="homefix-smart-overrides">
+(function(){
+  /* ---------- background tools ---------- */
+  function addSmartTools(){
+    if(document.getElementById('smartToolsBg')) return;
+    var d=document.createElement('div');d.id='smartToolsBg';d.className='smart-tools-bg';
+    ['🔧','⚡','🔌','❄️','🚿','🧰','🪚','🔩'].forEach(function(x){var s=document.createElement('span');s.textContent=x;d.appendChild(s)});
+    document.body.appendChild(d);
+  }
+  addSmartTools();
+
+  /* ---------- helpers ---------- */
+  var smartTxnRange='today', smartTxnFilter='all', smartTxnSearch='';
+  function dateOnly(v){return String(v||'').slice(0,10)}
+  function txnDateIn(t,range){
+    var d=new Date(dateOnly(t.transaction_date)+'T00:00:00'), now=new Date();
+    var today0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    if(range==='today')return d.getTime()===today0.getTime();
+    if(range==='week'){var day=today0.getDay();var diff=(day+6)%7;var monday=new Date(today0);monday.setDate(today0.getDate()-diff);return d>=monday&&d<=today0}
+    if(range==='month')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    return true;
+  }
+  function txnType(t){return t.category==='Parts'?'Parts':t.category==='Other'?'Other':'Service'}
+  function txnMoney(t){return Math.abs(+t.amount||0)}
+  function txnLabel(t){
+    if(t.category==='Service') return (t.booking_id?'Booking '+t.booking_id:'Service income');
+    if(t.category==='Parts') return t.part_name||t.title||'Parts / Material';
+    return t.title||'Other transaction';
+  }
+  function esc(v){return String(v==null?'':v)}
+
+  /* ---------- smart transactions ---------- */
+  window.renderTransactions=function(L){
+    var all=Array.isArray(accTxns)?accTxns.slice():[];
+    var visible=all.filter(function(t){
+      if(!txnDateIn(t,smartTxnRange))return false;
+      if(smartTxnFilter!=='all'&&txnType(t)!==smartTxnFilter)return false;
+      if(smartTxnSearch){
+        var q=smartTxnSearch.toLowerCase();
+        return [t.transaction_id,t.booking_id,t.customer,t.technician_name,t.part_name,t.title,t.note,t.payment_way]
+          .map(esc).join(' ').toLowerCase().indexOf(q)>-1;
+      }
+      return true;
+    });
+
+    var inc=visible.filter(function(t){return t.direction==='IN'}).reduce(function(a,t){return a+txnMoney(t)},0);
+    var out=visible.filter(function(t){return t.direction==='OUT'}).reduce(function(a,t){return a+txnMoney(t)},0);
+    var net=inc-out;
+
+    var head=el('div','section-head');
+    head.appendChild(el('h2','','Transaction Ledger'));
+    head.appendChild(el('span','mini-badge',visible.length+' entries'));
+    L.appendChild(head);
+
+    var sum=document.createElement('div');sum.className='smart-summary';
+    [['Money In',tk(inc),''],['Money Out',tk(out),''],['Net',tk(net),'net']].forEach(function(x){
+      var c=document.createElement('div');c.className='smart-stat '+x[2];
+      c.appendChild(el('small','',x[0]));c.appendChild(el('b','',x[1]));sum.appendChild(c);
+    });
+    L.appendChild(sum);
+
+    var periods=document.createElement('div');periods.className='smart-period';
+    [['today','Today'],['week','This week'],['month','This month'],['all','All']].forEach(function(x){
+      var b=el('button',smartTxnRange===x[0]?'on':'',x[1]);b.type='button';
+      b.onclick=function(){smartTxnRange=x[0];renderAdmin()};periods.appendChild(b);
+    });
+    L.appendChild(periods);
+
+    var search=document.createElement('input');search.className='smart-search';search.placeholder='🔎 Search ID, booking, customer, parts...';search.value=smartTxnSearch;
+    search.oninput=function(){smartTxnSearch=this.value;drawRows()};L.appendChild(search);
+
+    var filters=document.createElement('div');filters.className='smart-filter';
+    [['all','All'],['Service','🛠 Service'],['Parts','🔩 Parts'],['Other','📦 Other']].forEach(function(x){
+      var b=el('button',smartTxnFilter===x[0]?'on':'',x[1]);b.type='button';
+      b.onclick=function(){smartTxnFilter=x[0];renderAdmin()};filters.appendChild(b);
+    });
+    L.appendChild(filters);
+
+    var add=document.createElement('div');add.className='smart-add';
+    var type=document.createElement('select');['Service','Parts','Other'].forEach(function(x){var o=el('option','',x);o.value=x;type.appendChild(o)});
+    var dir=document.createElement('select');[['IN','IN — Money in'],['OUT','OUT — Money out']].forEach(function(x){var o=el('option','',x[1]);o.value=x[0];dir.appendChild(o)});
+    var date=document.createElement('input');date.type='date';date.value=today();
+    var amount=document.createElement('input');amount.type='number';amount.min='0';amount.placeholder='Amount';
+    var way=document.createElement('select');['Cash','Bank','Mobile banking'].forEach(function(x){var o=el('option','',x);o.value=x;way.appendChild(o)});
+    var title=document.createElement('input');title.placeholder='Title / description';
+    var part=document.createElement('input');part.placeholder='Part name (Parts only)';
+    var qty=document.createElement('input');qty.type='number';qty.min='1';qty.value='1';qty.placeholder='Quantity';
+    var unit=document.createElement('input');unit.type='number';unit.min='0';unit.placeholder='Unit price';
+    var note=document.createElement('input');note.className='wide';note.placeholder='Note (optional)';
+    [type,dir,date,amount,way,title,part,qty,unit,note].forEach(function(x){add.appendChild(x)});
+    var save=document.createElement('button');save.className='save';save.type='button';save.textContent='＋ Save transaction';
+    save.onclick=async function(){
+      if(!(+(amount.value)>0)){alert('Enter an amount.');return}
+      var category=type.value;
+      var payload={
+        transaction_date:date.value||today(),
+        direction:dir.value,category:category,amount:+amount.value,
+        payment_way:way.value,way:way.value,title:title.value.trim()||null,note:note.value.trim()||null,
+        part_name:category==='Parts'?(part.value.trim()||null):null,
+        quantity:category==='Parts'?(+qty.value||1):null,
+        unit_price:category==='Parts'?(+unit.value||(+amount.value/(+qty.value||1))):null,
+        created_by:me&&me.id?me.id:null
+      };
+      var r=await sb.from('acc_transactions').insert(payload);
+      if(r.error){$('dashNote').textContent='Could not save transaction: '+r.error.message;return}
+      await loadAdmin();
+    };
+    add.appendChild(save);L.appendChild(add);
+
+    var rows=document.createElement('div');L.appendChild(rows);
+    function drawRows(){
+      rows.innerHTML='';
+      var cur=all.filter(function(t){
+        if(!txnDateIn(t,smartTxnRange))return false;
+        if(smartTxnFilter!=='all'&&txnType(t)!==smartTxnFilter)return false;
+        if(smartTxnSearch){var q=smartTxnSearch.toLowerCase();return [t.transaction_id,t.booking_id,t.customer,t.technician_name,t.part_name,t.title,t.note,t.payment_way].map(esc).join(' ').toLowerCase().includes(q)}
+        return true;
+      });
+      if(!cur.length){rows.appendChild(el('p','hint','No transactions found.'));return}
+      cur.forEach(function(t){
+        var r=document.createElement('div');r.className='smart-row';
+        var main=document.createElement('div');main.className='main';
+        main.appendChild(el('b','',txnLabel(t)));
+        main.appendChild(el('small','',(t.transaction_id||'Auto ID')+' · '+dateOnly(t.transaction_date)));
+        r.appendChild(main);
+        var m=document.createElement('div');m.className='money '+(t.direction==='OUT'?'out':'in');m.textContent=(t.direction==='OUT'?'− ':'+ ')+tk(txnMoney(t));r.appendChild(m);
+        var w=el('span','smart-chip way',t.payment_way||t.way||'—');r.appendChild(w);
+        var ac=document.createElement('div');ac.className='smart-menu';
+        var eb=btn('Edit','',function(){smartEditTxn(t)});ac.appendChild(eb);
+        ac.appendChild(btn('×','danger',async function(){if(!confirm('Delete this transaction?'))return;var x=await sb.from('acc_transactions').delete().eq('id',t.id);if(x.error)alert(x.error.message);else loadAdmin()}));
+        r.appendChild(ac);rows.appendChild(r);
+      });
+    }
+    drawRows();
+  };
+
+  window.smartEditTxn=function(t){
+    var sh=el('div','sheet'),f=el('form'),title=el('h2','','Edit transaction');
+    f.appendChild(title);
+    var type=accSel(['Service','Parts','Other']);type.value=txnType(t);
+    var dir=accSel(['IN','OUT']);dir.value=t.direction||'IN';
+    var amt=accField('input','Amount','number');amt.value=t.amount||0;
+    var way=accSel(['Cash','Bank','Mobile banking']);way.value=t.payment_way||t.way||'Cash';
+    var desc=accField('input','Title / description');desc.value=t.title||'';
+    var note=accField('input','Note');note.value=t.note||'';
+    [type,dir,amt,way,desc,note].forEach(function(x){f.appendChild(x)});
+    var ac=el('div','acts');
+    ac.appendChild(btn('Save','pri',async function(){
+      var r=await sb.from('acc_transactions').update({category:type.value,direction:dir.value,amount:+amt.value,payment_way:way.value,way:way.value,title:desc.value.trim()||null,note:note.value.trim()||null}).eq('id',t.id);
+      if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
+    }));
+    ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
+  };
+
+  /* ---------- booking edit modal ---------- */
+  window.smartEditBooking=function(b){
+    var sh=el('div','sheet'),f=el('form');f.appendChild(el('h2','', 'Edit booking '+b.code));
+    var fields={};
+    [['customer','Customer',b.customer],['phone','Phone',b.phone],['address','Address',b.address],['category','Category',b.category],['sub','Sub category',b.sub],['service','Service',b.service],['booking_date','Date',b.booking_date],['booking_time','Time',b.booking_time]];
+    fields.price=accField('input','Price','number');fields.price.value=b.price||0;
+    fields.discount=accField('input','Discount','number');fields.discount.value=b.discount||0;
+    fields.date=accField('input','Date','date');fields.date.value=b.booking_date||today();
+    fields.time=accField('input','Time','time');fields.time.value=b.booking_time||'11:00';
+    var inputs={};
+    [['customer','Customer'],['phone','Phone'],['address','Address'],['category','Category'],['sub','Sub category'],['service','Service']].forEach(function(x){
+      var i=accField('input',x[1]);i.value=b[x[0]]||'';inputs[x[0]]=i;f.appendChild(i);
+    });
+    f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.price);f.appendChild(fields.discount);
+    var ac=el('div','acts');
+    ac.appendChild(btn('Save','pri',async function(){
+      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,price:+fields.price.value||0,discount:+fields.discount.value||0};
+      var r=await sb.from('bookings').update(d).eq('id',b.id);
+      if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
+    }));
+    ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
+  };
+
+  /* ---------- dashboard ---------- */
+  window.renderAdmin=function(){
+    var T=$('tabs'),L=$('list');T.innerHTML='';L.innerHTML='';
+    document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
+    document.querySelectorAll('.new-alert').forEach(function(e){e.remove()});
+    $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions',completed:'Completed Jobs'}[page]||'Dashboard';
+    $('csv').style.display=page==='dash'?'':'none';
+    renderNav();
+    if(page==='tech')return renderTeam(L);
+    if(page==='txn')return renderTransactions(L);
+    if(page==='svc')return renderSvc(L);
+    if(page==='completed')return renderCompletedJobs(L);
+
+    var newRows=bks.filter(function(b){return b.status==='pending'});
+    if(newRows.length){
+      var alertBox=el('button','new-alert');alertBox.type='button';
+      alertBox.onclick=function(){tab='new';drawDash()};
+      alertBox.appendChild(el('span','alert-dot','●'));
+      var aw=el('div');aw.appendChild(el('b','','🔔 New booking alert'));aw.appendChild(el('span','',newRows.length+' new booking'+(newRows.length>1?'s':'')+' waiting'));alertBox.appendChild(aw);alertBox.appendChild(el('span','alert-arrow','›'));T.parentNode.insertBefore(alertBox,T);
+    }
+
+    var tiles=el('div','tiles');
+    [['New bookings',newRows.length,function(){tab='new';drawDash()}],
+     ['Working',bks.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length,function(){tab='active';drawDash()}],
+     ['Not yet working',bks.filter(function(b){return b.status==='confirmed'&&(b.work_status==='not_started'||!b.work_status)}).length,function(){tab='active';drawDash()}],
+     ['Completed',accDone(bks).length,function(){page='completed';renderAdmin()}]
+    ].forEach(function(t){var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=t[2];tiles.appendChild(x)});
+    T.parentNode.insertBefore(tiles,T);
+
+    var controls=el('div','smart-filter');
+    [['new','🆕 New'],['working','🔧 Working'],['notyet','⏳ Not yet'],['all','All']].forEach(function(x){
+      var b=el('button',tab===x[0]?'on':'',x[1]);b.type='button';b.onclick=function(){tab=x[0];drawDash()};controls.appendChild(b);
+    });
+    T.parentNode.insertBefore(controls,T);
+
+    function drawDash(){
+      T.innerHTML='';L.innerHTML='';
+      document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
+      document.querySelectorAll('.new-alert').forEach(function(e){e.remove()});
+      renderAdmin();
+    }
+    var rows=bks.filter(function(b){
+      if(tab==='new')return b.status==='pending';
+      if(tab==='working')return b.status==='confirmed'&&b.work_status==='working';
+      if(tab==='notyet')return b.status==='confirmed'&&(b.work_status==='not_started'||!b.work_status);
+      if(tab==='active')return b.status==='confirmed'&&b.work_status!=='complete';
+      return true;
+    });
+    if(tab==='all')rows=rows.filter(function(b){return b.status!=='cancelled'});
+    if(!rows.length)L.appendChild(el('p','hint','No jobs in this section.'));
+    rows.forEach(function(b){
+      var c=document.createElement('div');c.className='smart-work';
+      var top=el('div','top');top.appendChild(el('b','',b.code+' · '+(b.customer||'—')));
+      top.appendChild(el('small','',b.booking_date||'—'));c.appendChild(top);
+      c.appendChild(el('div','meta','👨‍🔧 '+techName(b.tech_id)+' · 🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')+' · 💰 '+tk(bill(b))));
+      c.appendChild(el('div','meta','Status: '+(b.work_status||b.status||'—')+' · '+(b.booking_time||'')));
+      var ac=el('div','smart-actions');
+      ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));
+      if(b.status==='pending'){
+        var ts=techSelect(b);c.appendChild(ts);
+        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}upd(b.id,{status:'confirmed',tech_id:ts._s.value})}));
+        ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
+      }else if(b.status==='confirmed'){
+        ac.appendChild(btn('Not yet','',function(){upd(b.id,{work_status:'not_started'})}));
+        ac.appendChild(btn('Working','primary',function(){upd(b.id,{work_status:'working'})}));
+        ac.appendChild(btn('Complete','primary',function(){upd(b.id,{work_status:'complete'})}));
+        ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
+      }
+      c.appendChild(ac);L.appendChild(c);
+    });
+  };
+
+  /* ---------- technician smart view ---------- */
+  window.renderTeam=function(L){
+    var rows=users.filter(function(u){return u.role==='technician'});
+    L.appendChild(el('div','section-head')).lastChild;
+    if(!rows.length){L.appendChild(el('p','hint','No technicians yet.'));return}
+    rows.forEach(function(u){
+      var jobs=bks.filter(function(b){return b.tech_id===u.id});
+      var done=jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'});
+      var month=done.filter(function(b){var d=String(b.booking_date||'');var n=new Date();return d.slice(0,7)===n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')});
+      var card=document.createElement('div');card.className='tech-profile';
+      var h=el('div','tech-head');var nm=el('div');nm.appendChild(el('b','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)));nm.appendChild(el('small','',(u.phone||'No phone')+' · '+(u.joining_date||'Joining date not set')));h.appendChild(nm);h.appendChild(el('span','smart-chip',u.speciality||'Technician'));card.appendChild(h);
+      var g=document.createElement('div');g.className='tech-grid';
+      [['Total work',done.length],['This month',month.length],['Working',jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length],['Commission',tk(done.reduce(function(s,b){return s+accComm(b)},0))]].forEach(function(x){var s=el('div','tech-stat');s.appendChild(el('small','',x[0]));s.appendChild(el('b','',String(x[1])));g.appendChild(s)});card.appendChild(g);
+      var salary=document.createElement('div');salary.className='salary-box';
+      var base=+u.base_salary||0, comm=month.reduce(function(s,b){return s+accComm(b)},0), net=base+comm+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
+      [['Base salary',tk(base)],['Commission',tk(comm)],['Overtime/Bonus',tk((+u.overtime||0)+(+u.bonus||0))],['Advance',tk(+u.advance||0)],['Net estimate',tk(net)]].forEach(function(x){var r=el('div','salary-row'+(x[0]==='Net estimate'?' total':''));r.appendChild(el('span','',x[0]));r.appendChild(el('b','',x[1]));salary.appendChild(r)});
+      card.appendChild(salary);
+      var ac=el('div','smart-actions');
+      ac.appendChild(btn('Work history','',function(){var old=page;page='completed';renderAdmin();$('dashNote').textContent='Technician: '+(u.name||u.email)}));
+      ac.appendChild(btn('Edit details','primary',function(){smartEditTech(u)}));card.appendChild(ac);
+      L.appendChild(card);
+    });
+  };
+
+  window.smartEditTech=function(u){
+    var sh=el('div','sheet'),f=el('form');f.appendChild(el('h2','', 'Technician details'));
+    var vals={joining_date:u.joining_date||'',speciality:u.speciality||'',base_salary:u.base_salary||0,overtime:u.overtime||0,bonus:u.bonus||0,advance:u.advance||0,adjustment:u.adjustment||0};
+    var fields={};
+    [['joining_date','Joining date','date'],['speciality','Speciality'],['base_salary','Base salary','number'],['overtime','Overtime','number'],['bonus','Bonus','number'],['advance','Advance','number'],['adjustment','Adjustment','number']].forEach(function(x){
+      var i=accField('input',x[1],x[2]);i.value=vals[x[0]];fields[x[0]]=i;f.appendChild(i);
+    });
+    var ac=el('div','acts');ac.appendChild(btn('Save','pri',async function(){
+      var d={joining_date:fields.joining_date.value||null,speciality:fields.speciality.value.trim(),base_salary:+fields.base_salary.value||0,overtime:+fields.overtime.value||0,bonus:+fields.bonus.value||0,advance:+fields.advance.value||0,adjustment:+fields.adjustment.value||0};
+      var r=await sb.from('profiles').update(d).eq('id',u.id);if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
+    }));ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
+  };
+
+  /* Make dashboard the only place where completed history is opened. */
+})();
+</script>
+
 </body>
 </html>
