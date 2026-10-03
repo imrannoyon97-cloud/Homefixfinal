@@ -1131,7 +1131,7 @@ $('csv').addEventListener('click',function(){
 
 // ================= assign + send details (WhatsApp / SMS / imo) =================
 function intlPhone(v){var n=normPhone(v);return n.indexOf('0')===0?'88'+n:n}
-function jobMsg(b,t,d,tm,who){
+function jobMsg(b,t,d,tm,who,ex){
   var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
   var its=(b.items&&b.items.length)?b.items.map(function(x){return '• '+x.n+' — ৳ '+(+x.a||0)}).join('\n'):'';
   var L=[];
@@ -1140,11 +1140,11 @@ function jobMsg(b,t,d,tm,who){
       'Technician details:','Name: '+(t?(t.name||t.email):'—'),'ID: '+((t&&t.tech_code)||'—'),'Phone: '+((t&&t.phone)||'—'),'',
       'Service details:',svc);
     if(its)L.push(its);
-    L.push('','কখন যাবে: '+d+', '+fmtTime(tm),'Address: '+b.address,'Bill: ৳ '+bill(b),'','Technician আপনাকে call করবেন। ধন্যবাদ — HomeFix');
+    L.push('','কখন যাবে: '+d+', '+fmtTime(tm)+(ex?' ('+ex+')':''),'Address: '+b.address,'Bill: ৳ '+bill(b),'','Technician আপনাকে call করবেন। ধন্যবাদ — HomeFix');
   }else{
     L.push('HomeFix — নতুন কাজ','','Booking ID: '+b.code,'Service: '+svc);
     if(its)L.push(its);
-    L.push('কখন যাবে: '+d+', '+fmtTime(tm),'','Customer: '+b.customer,'Phone: '+b.phone,'Address: '+b.address,'Bill: ৳ '+bill(b),'','Status update করতে app-এ login করুন।');
+    L.push('কখন যাবে: '+d+', '+fmtTime(tm)+(ex?' ('+ex+')':''),'','Customer: '+b.customer,'Phone: '+b.phone,'Address: '+b.address,'Bill: ৳ '+bill(b),'','Status update করতে app-এ login করুন।');
   }
   return L.join('\n');
 }
@@ -1160,11 +1160,13 @@ function sendSheet(b,techId,toWho){
   var dt=accField('input','Date','date');dt.value=b.booking_date||today();
   var tm=accField('input','Time','time');tm.value=b.booking_time||'11:00';
   var ta=document.createElement('textarea');ta.rows=9;ta.style.cssText='width:100%;margin-top:8px;font:inherit';
+  var ex=document.createElement('select');ex.style.marginTop='8px';
+  [['','Expected arrival (optional)'],['ঠিক সময়ে','ঠিক সময়ে'],['সময়ের ৩০ মিনিটের মধ্যে','৩০ মিনিটের মধ্যে'],['সময়ের ১ ঘণ্টার মধ্যে','১ ঘণ্টার মধ্যে'],['যাওয়ার আগে call করবেন','যাওয়ার আগে call করবেন']].forEach(function(x){var o=el('option','',x[1]);o.value=x[0];ex.appendChild(o)});
   var note=el('p','hint','');
   function phone(){return to.value==='customer'?b.phone:t.phone}
-  function refresh(){ta.value=jobMsg(b,t,dt.value,tm.value,to.value);if(!phone())note.textContent='এই নম্বরে phone নেই — Copy ব্যবহার করুন।';else note.textContent=''}
-  [to,dt,tm].forEach(function(x){x.onchange=refresh});refresh();
-  [to,lb,dt,tm,ta,note].forEach(function(x){f.appendChild(x)});
+  function refresh(){ta.value=jobMsg(b,t,dt.value,tm.value,to.value,ex.value);if(!phone())note.textContent='এই নম্বরে phone নেই — Copy ব্যবহার করুন।';else note.textContent=''}
+  [to,dt,tm,ex].forEach(function(x){x.onchange=refresh});refresh();
+  [to,lb,dt,tm,ex,ta,note].forEach(function(x){f.appendChild(x)});
   var ac=el('div','acts');
   async function saveTime(){if(dt.value!==b.booking_date||tm.value!==b.booking_time){var r=await sb.from('bookings').update({booking_date:dt.value,booking_time:tm.value}).eq('id',b.id);if(!r.error){b.booking_date=dt.value;b.booking_time=tm.value}}}
   function need(){if(!phone()){alert('Phone number নেই');return false}return true}
@@ -1526,7 +1528,7 @@ body::before{
     });
     L.appendChild(periods);
 
-    var search=document.createElement('input');search.className='smart-search';search.placeholder='🔎 Search ID, booking, customer, parts...';search.value=smartTxnSearch;
+    var search=document.createElement('input');search.className='smart-search';search.type='search';search.autocomplete='off';search.name='hf-txn-q';search.placeholder='🔎 Search ID, booking, customer, parts...';search.value=smartTxnSearch;
     search.oninput=function(){smartTxnSearch=this.value;drawRows()};L.appendChild(search);
 
     var filters=document.createElement('div');filters.className='smart-filter';
@@ -1662,6 +1664,7 @@ body::before{
     $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions',completed:'Completed Jobs'}[page]||'Dashboard';
     $('csv').style.display=page==='dash'?'':'none';
     renderNav();
+    if(page!=='txn')smartTxnSearch='';
     if(page==='tech')return renderTeam(L);
     if(page==='txn')return renderTransactions(L);
     if(page==='svc')return renderSvc(L);
@@ -1769,5 +1772,85 @@ body::before{
 })();
 </script>
 
+<script>
+/* ===== Technician management: add / full details / edit ===== */
+(function(){
+function lf(l,i){var d=el('div','sf'),b=el('label','',l);b.style.cssText='display:block;font-size:12px;opacity:.8;margin-top:10px';d.appendChild(b);i.style.marginTop='4px';d.appendChild(i);return d}
+function fld(t,v,ph){var i=document.createElement('input');i.type=t||'text';i.value=v==null?'':v;if(ph)i.placeholder=ph;i.autocomplete='off';return i}
+function area(v){var t=document.createElement('textarea');t.rows=2;t.value=v||'';t.style.cssText='width:100%;font:inherit';return t}
+function shrink(f){return new Promise(function(ok,no){var r=new FileReader();r.onerror=no;r.onload=function(){var im=new Image();im.onerror=no;im.onload=function(){var k=Math.min(1,256/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.72))};im.src=r.result};r.readAsDataURL(f)})}
+function avatar(u,z){var d=el('div','');d.style.cssText='width:'+z+'px;height:'+z+'px;border-radius:50%;overflow:hidden;flex:none;background:#26413c;display:flex;align-items:center;justify-content:center;font-weight:700';
+  if(u.photo){var i=document.createElement('img');i.src=u.photo;i.alt='';i.style.cssText='width:100%;height:100%;object-fit:cover';d.appendChild(i)}else d.textContent=String(u.name||u.email||'?').trim().charAt(0).toUpperCase();return d}
+var FIELDS=[['name','Full name','text'],['phone','Phone 1','tel'],['phone2','Phone 2','tel'],['nid','NID number','text'],['present_address','Present address','area'],['permanent_address','Permanent address','area'],['dob','Date of birth','date'],['blood_group','Blood group','text'],['emergency_contact','Emergency contact (name & phone)','text'],['speciality','Speciality','text'],['joining_date','Joining date','date'],['base_salary','Base salary','number'],['overtime','Overtime','number'],['bonus','Bonus','number'],['advance','Advance','number'],['adjustment','Adjustment','number'],['notes','Notes','area']];
+var NUM={base_salary:1,overtime:1,bonus:1,advance:1,adjustment:1},DT={dob:1,joining_date:1};
+function techSheet(u){
+  var add=!u;u=u||{};var sh=el('div','sheet'),f=el('form'),photo=u.photo||'',F={};
+  f.appendChild(el('h2','',add?'Add technician':'Technician details'));
+  var pw=el('div','');pw.style.cssText='display:flex;gap:12px;align-items:center';pw.appendChild(avatar({photo:photo,name:u.name},72));
+  var pf=document.createElement('input');pf.type='file';pf.accept='image/*';
+  pf.onchange=async function(){if(!pf.files[0])return;try{photo=await shrink(pf.files[0]);pw.replaceChild(avatar({photo:photo},72),pw.firstChild)}catch(e){alert('Photo পড়া যায়নি')}};
+  pw.appendChild(pf);f.appendChild(lf('Photo',pw));
+  var idf=fld('text',add?'Auto — save করলে তৈরি হবে':(u.tech_code||'—'));idf.disabled=true;f.appendChild(lf('Technician ID (বদলানো যাবে না)',idf));
+  var em=fld('email',u.email||'','email@example.com'),pwd=fld('password','','কমপক্ষে ৬ অক্ষর');
+  if(add){f.appendChild(lf('Email (login)',em));f.appendChild(lf('Password (login)',pwd))}
+  else{em.disabled=true;f.appendChild(lf('Email (login)',em))}
+  FIELDS.forEach(function(x){var i=x[2]==='area'?area(u[x[0]]):fld(x[2],u[x[0]]);if(NUM[x[0]]&&!add)i.value=u[x[0]]||0;F[x[0]]=i;f.appendChild(lf(x[1],i))});
+  function read(){var d={photo:photo||null};FIELDS.forEach(function(x){var v=F[x[0]].value.trim();d[x[0]]=NUM[x[0]]?(+v||0):(v||null)});
+    if(d.phone)d.phone=normPhone(d.phone);if(d.phone2)d.phone2=normPhone(d.phone2);return d}
+  function fail(e){alert((e.message||e)+(/column|schema/i.test(e.message||'')?'\n\nআগে Supabase-এ নতুন column-এর SQL চালান।':''))}
+  var ac=el('div','acts');
+  ac.appendChild(btn('Save','pri',async function(){
+    var d=read();
+    if(!d.name){alert('Name দিন');return}
+    if(d.phone&&!okPhone(d.phone)){alert('Phone 1 সঠিক নয় (01XXXXXXXXX)');return}
+    if(d.phone2&&!okPhone(d.phone2)){alert('Phone 2 সঠিক নয়');return}
+    if(!add){var r=await sb.from('profiles').update(d).eq('id',u.id);if(r.error)return fail(r.error);sh.remove();loadAdmin();return}
+    var e1=em.value.trim().toLowerCase();
+    if(!e1||pwd.value.length<6||!d.phone){alert('Email, ৬+ অক্ষরের password ও Phone 1 দিন');return}
+    try{
+      var tmp=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'hf-add-tech'}});
+      var s1=await tmp.auth.signUp({email:e1,password:pwd.value,options:{data:{name:d.name,phone:d.phone}}});
+      if(s1.error)return fail(s1.error);
+      var nu=s1.data&&s1.data.user;if(!nu||(nu.identities&&!nu.identities.length)){alert('এই email আগে থেকেই আছে');return}
+      d.role='technician';var ok=false,er=null;
+      for(var k=0;k<5&&!ok;k++){var x=await sb.from('profiles').update(d).eq('id',nu.id).select('id');if(!x.error&&x.data&&x.data.length)ok=true;else{er=x.error;await new Promise(function(r){setTimeout(r,600)})}}
+      if(!ok)return fail(er||'Profile তৈরি হয়নি। Supabase-এ email confirmation চালু থাকলে নতুন technician-কে email confirm করতে হবে।');
+      sh.remove();loadAdmin();
+    }catch(x){fail(x)}
+  }));
+  ac.appendChild(btn('Cancel','',function(){sh.remove()}));f.appendChild(ac);sh.appendChild(f);
+  sh.onclick=function(e){if(e.target===sh)sh.remove()};document.body.appendChild(sh);
+}
+window.smartEditTech=techSheet;
+window.renderTeam=function(L){
+  var top=el('div','acts');top.appendChild(btn('➕ Add technician','pri',function(){techSheet(null)}));L.appendChild(top);
+  users.filter(function(u){return u.role==='pending'}).forEach(function(u){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',u.name||u.email));r.appendChild(el('span','chip new','Waiting'));c.appendChild(r);
+    c.appendChild(el('p','',[u.email,u.phone].filter(Boolean).join(' · ')));var a=el('div','acts');
+    a.appendChild(btn('Approve as technician','pri',async function(){var x=await sb.from('profiles').update({role:'technician'}).eq('id',u.id);if(x.error)alert(x.error.message);else loadAdmin()}));c.appendChild(a);L.appendChild(c)});
+  var rows=users.filter(function(u){return u.role==='technician'});
+  if(!rows.length){L.appendChild(el('p','hint','No technicians yet.'));return}
+  rows.forEach(function(u){
+    var jobs=bks.filter(function(b){return b.tech_id===u.id}),done=jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'});
+    var n=new Date(),ym=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+    var month=done.filter(function(b){return String(b.booking_date||'').slice(0,7)===ym});
+    var c=document.createElement('div');c.className='tech-profile';
+    var h=el('div','tech-head');h.style.cssText='display:flex;gap:12px;align-items:center';h.appendChild(avatar(u,56));
+    var nm=el('div');nm.style.flex='1';nm.appendChild(el('b','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)));
+    nm.appendChild(el('small','',[u.phone,u.phone2].filter(Boolean).join(' / ')||'No phone'));h.appendChild(nm);h.appendChild(el('span','smart-chip',u.speciality||'Technician'));c.appendChild(h);
+    var info=[u.nid?'NID: '+u.nid:'',u.present_address?'Address: '+u.present_address:'',u.joining_date?'Joined: '+u.joining_date:''].filter(Boolean).join(' · ');
+    if(info)c.appendChild(el('p','hint',info));
+    var g=el('div','tech-grid');
+    [['Total work',done.length],['This month',month.length],['Working',jobs.filter(function(b){return b.status==='confirmed'&&b.work_status==='working'}).length],['Today',done.filter(function(b){return b.booking_date===today()}).length]].forEach(function(x){var t=el('div','tech-stat');t.appendChild(el('small','',x[0]));t.appendChild(el('b','',String(x[1])));g.appendChild(t)});c.appendChild(g);
+    var sal=el('div','salary-box'),base=+u.base_salary||0,net=base+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
+    [['Base salary',tk(base)],['Overtime/Bonus',tk((+u.overtime||0)+(+u.bonus||0))],['Advance',tk(+u.advance||0)],['Net estimate',tk(net)]].forEach(function(x){var r=el('div','salary-row'+(x[0]==='Net estimate'?' total':''));r.appendChild(el('span','',x[0]));r.appendChild(el('b','',x[1]));sal.appendChild(r)});c.appendChild(sal);
+    var ac=el('div','smart-actions');
+    ac.appendChild(btn('Work history','',function(){page='completed';renderAdmin();$('dashNote').textContent='Technician: '+(u.name||u.email)}));
+    ac.appendChild(btn('Edit details','primary',function(){techSheet(u)}));
+    if(u.phone)ac.appendChild(btn('Call','',function(){location.href='tel:'+normPhone(u.phone)}));
+    c.appendChild(ac);L.appendChild(c)});
+};
+})();
+</script>
 </body>
 </html>
