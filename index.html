@@ -331,6 +331,129 @@ input:focus-visible,select:focus-visible,.btn:focus-visible,.rm:focus-visible{
 .sb.del{color:#B85C5C;border-color:#E2BABA}
 .id{background:#6FA89A}
 
+
+/* ===== HomeFix Smart Admin v2 ===== */
+:root{
+  --raw:#12221f;
+  --raw2:#19332f;
+  --raw3:#21423b;
+  --white:#ffffff;
+  --soft:#dbe8e4;
+  --mint:#70c5b1;
+  --mint2:#4ea48f;
+  --danger:#ff7777;
+  --gold:#f5c86a;
+}
+body{
+  background:var(--raw)!important;
+  color:var(--white)!important;
+  font-family:Montserrat,system-ui,sans-serif;
+}
+body::before{
+  content:"🔧  ⚡  🪛  🔌  ❄️  🚿  🧰  🪚  💡  🔩  🛠️  🔧  🚿";
+  opacity:.075!important;
+  color:#d9fff5;
+  z-index:-1;
+}
+main{max-width:400px!important;padding:12px 10px 86px!important}
+h1,h2,.who,.hint,label,.nm,.bc p,.bc a,.tag,.sub,.section-head,.completed-link,
+.job-main,.job-right,.txn-row,.txn-form,.tile,.tab,.hisab-head,.hisab-head h2{color:var(--white)!important}
+h1{font-size:25px!important;margin-bottom:12px!important}
+h2{font-size:17px!important}
+.back{color:var(--white)!important;font-size:14px!important;margin-bottom:12px}
+.who{font-size:11px!important;color:#b9cbc7!important;margin:-5px 0 10px!important}
+.tabs{gap:5px!important;margin-bottom:9px!important}
+.tab{
+  min-height:34px!important;border:1px solid #46635d!important;border-radius:9px!important;
+  background:#18302c!important;color:#cfe0dc!important;font-size:10px!important;
+}
+.tab[aria-pressed=true]{background:var(--mint2)!important;color:#08211b!important;border-color:var(--mint2)!important}
+.tiles{grid-template-columns:repeat(2,1fr)!important;gap:7px!important;margin-bottom:8px!important}
+.tile{
+  background:var(--raw2)!important;border:1px solid #355a52!important;border-radius:11px!important;
+  padding:9px!important;box-shadow:none!important;
+}
+.tile b{font-size:17px!important;color:var(--white)!important}.tile span{font-size:10px!important;color:#a9c0bb!important}
+.bc,.sum,.bk{
+  background:var(--raw2)!important;border:1px solid #385a53!important;border-radius:11px!important;
+  color:var(--white)!important;padding:10px!important;margin-bottom:8px!important;box-shadow:none!important;
+}
+.bc p{font-size:11px!important;color:#b7c8c4!important}
+.bc p.bl{color:#fff!important}
+.bc a{color:#fff!important}
+.chip{font-size:9px!important;padding:3px 7px!important;background:#31564e!important;color:#fff!important}
+.chip.new{background:#c99734!important;color:#fff!important}
+.chip.ok{background:var(--mint2)!important;color:#07231d!important}
+.sb{
+  min-height:32px!important;border:1px solid #52746b!important;border-radius:8px!important;
+  background:#1b3934!important;color:#fff!important;font-size:11px!important;padding:0 9px!important;
+}
+.sb.pri{background:var(--mint2)!important;border-color:var(--mint2)!important;color:#08221c!important}
+.sb.del{background:transparent!important;border-color:#a34f55!important;color:#ffaaa9!important}
+input,select{
+  min-height:42px!important;background:#17312d!important;color:#fff!important;
+  border:1px solid #46665f!important;border-radius:9px!important;font-size:13px!important;
+}
+input::placeholder{color:#8fa6a1!important}
+.price span{min-height:42px!important;background:var(--mint2)!important;color:#06241e!important;border:1px solid var(--mint2)!important}
+.new-alert{
+  width:100%;display:flex;align-items:center;gap:9px;text-align:left;
+  margin:0 0 8px;padding:9px 10px;border-radius:11px;border:1px solid #9a7130;
+  background:#3b301c;color:#fff;cursor:pointer;
+}
+.new-alert b{display:block;font-size:12px}.new-alert span{font-size:10px;color:#e7d8b4}
+.new-alert .alert-dot{font-size:15px;color:#f0b83e}.new-alert .alert-arrow{margin-left:auto;font-size:20px;color:#f0c96b}
+.completed-link{
+  width:100%;display:grid;grid-template-columns:28px 1fr 1fr 20px;align-items:center;
+  gap:5px;margin:0 0 9px;padding:9px 10px;border-radius:11px;
+  border:1px solid #46665f;background:#193b35;text-align:left;cursor:pointer;
+}
+.completed-link span{font-size:17px;color:var(--mint)}
+.completed-link b{font-size:12px}.completed-link small{font-size:9px;color:#a9c0bb}.completed-link strong{font-size:20px;color:#9bc9bf}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px}
+.mini-badge{font-size:9px;padding:4px 7px;border-radius:99px;background:#31574f;color:#d8f4ed}
+.job-row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  background:#18312d;border:1px solid #3c5f57;border-radius:10px;padding:9px;margin-bottom:6px;
+}
+.job-main{min-width:0}.job-id{display:flex;gap:8px;align-items:center}.job-id b{font-size:12px}.job-date{font-size:9px;color:#9eb5b0}
+.job-tech,.job-service,.job-items{font-size:10px;color:#b9cbc7;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-items{color:#d8e6e2}
+.job-right{text-align:right;min-width:86px}.job-amount{display:block;font-size:14px;color:#fff;margin-bottom:5px}
+.row-actions{display:flex;gap:4px;justify-content:flex-end;margin-top:6px}
+.row-actions .sb{min-height:28px;font-size:9px;padding:0 7px}
+.txn-form{
+  display:grid;grid-template-columns:1fr 1.2fr 1fr 1fr;gap:5px;
+  background:#18312d;border:1px solid #3c5f57;border-radius:10px;padding:7px;margin-bottom:8px;
+}
+.txn-form input,.txn-form select{margin-top:0!important;min-height:36px!important;font-size:10px!important}
+.txn-form button{grid-column:1/-1;min-height:32px!important}
+.txn-row{
+  display:grid;grid-template-columns:58px 1fr 72px 76px auto;gap:5px;align-items:center;
+  background:#18312d;border:1px solid #3c5f57;border-radius:9px;padding:7px;margin-bottom:5px;
+}
+.txn-date,.txn-id,.txn-amt,.txn-way{font-size:10px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txn-id{color:#c4d5d1}.txn-amt{font-weight:800;text-align:right}.txn-way{
+  text-align:center;padding:4px 5px;border-radius:99px;background:#294d46;color:#d8eee9
+}
+.txn-row .row-actions{margin:0}
+.txn-row .row-actions .sb{min-height:25px}
+.hisab-head .badge{background:var(--mint2)!important;color:#08231d!important}
+.tool-strip{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:5px!important;margin-bottom:8px!important}
+.tool-strip span{min-height:29px!important;background:#193b35!important;border:1px solid #3d6259!important;color:#d7e8e4!important;font-size:9px!important}
+.sum{padding:8px!important}.sum div{padding:4px 0!important}.sum span{font-size:11px!important;color:#b7c9c4!important}.sum b{font-size:14px!important;color:#fff!important}
+.anav{background:#10231f!important;border-top:1px solid #315048!important;box-shadow:0 -6px 16px rgba(0,0,0,.25)!important}
+.anav button{color:#90aaa4!important;font-size:8px!important}
+.anav button[aria-pressed=true]{color:var(--mint)!important}
+.anav .nw .ic{background:var(--mint2)!important;color:#06231d!important;border-color:var(--raw)!important}
+.sheet{background:rgba(0,0,0,.72)!important}.sheet form{background:#122a26!important;color:#fff!important}
+.exp-card{background:#18312d!important}
+.exp-meta{color:#a9bfba!important}.exp-amount{color:#fff!important}
+@media(max-width:360px){
+  main{padding-left:8px!important;padding-right:8px!important}
+  .txn-row{grid-template-columns:52px 1fr 62px 66px auto}
+}
+
 </style>
 </head>
 <body>
@@ -612,7 +735,7 @@ function invoice(b){
 }
 
 // ================= admin =================
-var bks=[],users=[],tab='new',page='dash';
+var bks=[],users=[],tab='new',page='dash',accTxns=[];
 var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled']];
 function startAdmin(){
   window.isAdm=true;page='dash';show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
@@ -620,6 +743,8 @@ function startAdmin(){
 }
 async function loadAdmin(){
   var a=await sb.from('bookings').select('*').order('created_at',{ascending:false});
+  var tr=await sb.from('acc_transactions').select('*').order('transaction_date',{ascending:false}).order('created_at',{ascending:false});
+  accTxns=tr.error?[]:(tr.data||[]);
   var u=await sb.from('profiles').select('*').order('created_at',{ascending:false});
   if(a.error||u.error){$('dashNote').textContent='Could not load data.';return}
   var dp=await sb.from('acc_deposits').select('*').order('created_at',{ascending:false});var xp=await sb.from('acc_expenses').select('*').order('created_at',{ascending:false});
@@ -660,7 +785,7 @@ function renderNav(){
   var set=function(id,n){var e=$(id);e.textContent=n;e.hidden=!n};
   set('bd-dash',bks.filter(function(b){return inTab(b,'new')}).length);
   set('bd-tech',users.filter(function(u){return u.role==='pending'}).length);
-  set('bd-txn',accDeps.filter(function(d){return d.status==='pending'}).length);
+  set('bd-txn',accTxns.length);
 }
 var svcRows=[],svcErr='',svcOpen={};
 function buildCat(rows){var c={};rows.forEach(function(r){c[r.category]=c[r.category]||{};(c[r.category][r.sub]=c[r.category][r.sub]||[]).push(r.name)});return c}
@@ -724,22 +849,138 @@ function renderSvc(L){
     L.appendChild(d);
   });
 }
+
+function renderCompletedJobs(L){
+  var jobs=accDone(bks).slice().sort(function(a,b){
+    return String(b.booking_date||'').localeCompare(String(a.booking_date||'')) ||
+           String(b.created_at||'').localeCompare(String(a.created_at||''));
+  });
+  var top=el('div','section-head');
+  top.appendChild(el('h2','','Completed jobs'));
+  top.appendChild(el('span','mini-badge',String(jobs.length)+' jobs'));
+  L.appendChild(top);
+
+  if(!jobs.length){
+    L.appendChild(el('p','hint','No completed jobs yet.'));
+    return;
+  }
+
+  jobs.forEach(function(b){
+    var c=el('div','job-row');
+    var left=el('div','job-main');
+    var idline=el('div','job-id');
+    idline.appendChild(el('b','',b.code));
+    idline.appendChild(el('span','job-date',b.booking_date||'—'));
+    left.appendChild(idline);
+    left.appendChild(el('div','job-tech','👨‍🔧 '+techName(b.tech_id)));
+    left.appendChild(el('div','job-service','🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')));
+    var it=items(b).map(function(x){return x.n+' — '+tk(x.a)}).join(' • ');
+    left.appendChild(el('div','job-items',it||'No work items'));
+    var right=el('div','job-right');
+    right.appendChild(el('b','job-amount',tk(bill(b))));
+    right.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));
+    var ac=el('div','row-actions');
+    ac.appendChild(btn('Edit','',function(){billSheet(b,true,loadAdmin)}));
+    ac.appendChild(btn('Delete','del',async function(){
+      if(!confirm('Delete completed booking '+b.code+' permanently?'))return;
+      var r=await sb.from('bookings').delete().eq('id',b.id);
+      if(r.error){$('dashNote').textContent='Could not delete: '+r.error.message;return}
+      await loadAdmin();
+    }));
+    right.appendChild(ac);
+    c.appendChild(left);c.appendChild(right);L.appendChild(c);
+  });
+}
+
+function renderTransactions(L){
+  var head=el('div','section-head');
+  head.appendChild(el('h2','','Transaction ledger'));
+  head.appendChild(el('span','mini-badge',String(accTxns.length)+' entries'));
+  L.appendChild(head);
+
+  var f=el('div','txn-form');
+  var date=accField('input','Date','date');date.value=today();
+  var tid=accField('input','Transaction ID');
+  var amount=accField('input','Amount','number');amount.inputMode='numeric';
+  var way=accSel(['Bank','Cash','Mobile banking']);
+  var save=btn('+ Add transaction','pri',async function(){
+    if(!(+amount.value>0)){ $('dashNote').textContent='Enter an amount.'; return; }
+    var r=await sb.from('acc_transactions').insert({
+      transaction_date:date.value||today(),
+      transaction_id:tid.value.trim()||'—',
+      amount:+amount.value,
+      way:way.value
+    });
+    if(r.error){
+      $('dashNote').textContent='Transaction table missing or save failed. Run the transaction SQL first.';
+      return;
+    }
+    await loadAdmin();
+  });
+  f.appendChild(date);f.appendChild(tid);f.appendChild(amount);f.appendChild(way);f.appendChild(save);
+  L.appendChild(f);
+
+  if(!accTxns.length){
+    L.appendChild(el('p','hint','No transactions yet.'));
+    return;
+  }
+
+  accTxns.forEach(function(t){
+    var r=el('div','txn-row');
+    r.appendChild(el('div','txn-date',String(t.transaction_date||'').slice(0,10)));
+    r.appendChild(el('div','txn-id',t.transaction_id||'—'));
+    r.appendChild(el('div','txn-amt',tk(t.amount)));
+    var w=el('span','txn-way',t.way||'—');
+    r.appendChild(w);
+    var ac=el('div','row-actions');
+    ac.appendChild(btn('Delete','del',async function(){
+      if(!confirm('Delete this transaction?'))return;
+      var x=await sb.from('acc_transactions').delete().eq('id',t.id);
+      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin();
+    }));
+    r.appendChild(ac);
+    L.appendChild(r);
+  });
+}
+
 function renderAdmin(){
   var T=$('tabs');T.innerHTML='';var L=$('list');L.innerHTML='';
   document.querySelectorAll('.tiles').forEach(function(e){e.remove()});
-  $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions'}[page];
+  $('dashTitle').textContent={dash:'Dashboard',tech:'Technicians',svc:'Services',txn:'Transactions',completed:'Completed Jobs'}[page];
   $('csv').style.display=page==='dash'?'':'none';
   renderNav();
   if(page==='tech')return renderTeam(L);
-  if(page==='txn')return renderHisab(L);
+  if(page==='txn')return renderTransactions(L);
+  if(page==='completed')return renderCompletedJobs(L);
   if(page==='svc')return renderSvc(L);
+  var newCount=bks.filter(function(b){return inTab(b,'new')}).length;
+  if(page==='dash' && newCount){
+    var alertBox=el('button','new-alert');
+    alertBox.type='button';
+    alertBox.onclick=function(){tab='new';renderAdmin()};
+    alertBox.appendChild(el('span','alert-dot','●'));
+    var aw=el('div');
+    aw.appendChild(el('b','','New booking received'));
+    aw.appendChild(el('span','',newCount+' booking'+(newCount>1?'s are':' is')+' waiting for action'));
+    alertBox.appendChild(aw);
+    alertBox.appendChild(el('span','alert-arrow','›'));
+    T.parentNode.insertBefore(alertBox,T);
+  }
+
   var tiles=el('div','tiles'),todayInc=sumOf(accDone(bks).filter(function(b){return b.booking_date===today()}),bill);
-  [['New bookings',bks.filter(function(b){return inTab(b,'new')}).length,function(){tab='new';renderAdmin()}],
+  [['New bookings',newCount,function(){tab='new';renderAdmin()}],
    ['Active jobs',bks.filter(function(b){return inTab(b,'active')}).length,function(){tab='active';renderAdmin()}],
    ['Income today',tk(todayInc),function(){page='txn';renderAdmin()}],
-   ['Deposits to confirm',accDeps.filter(function(d){return d.status==='pending'}).length,function(){page='txn';renderAdmin()}]
+   ['Deposits to confirm',accDeps.filter(function(d){return d.status==='pending'}).length,function(){page='txn';renderAdmin()}],
+   ['Completed jobs',accDone(bks).length,function(){page='completed';renderAdmin()}]
   ].forEach(function(t){var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=t[2];tiles.appendChild(x)});
   T.parentNode.insertBefore(tiles,T);
+
+  var doneBtn=el('button','completed-link');
+  doneBtn.type='button';
+  doneBtn.innerHTML='<span>✓</span><b>Completed Jobs</b><small>Open row-wise history</small><strong>›</strong>';
+  doneBtn.onclick=function(){page='completed';renderAdmin()};
+  T.parentNode.insertBefore(doneBtn,T);
   TABS.forEach(function(t){
     var n=bks.filter(function(b){return inTab(b,t[0])}).length;
     var x=el('button','tab',t[1]+(n?' ('+n+')':''));x.type='button';x.setAttribute('aria-pressed',tab===t[0]);x.onclick=function(){tab=t[0];renderAdmin()};T.appendChild(x)});
@@ -897,16 +1138,11 @@ function renderHisab(L){
   f.appendChild(ac);L.appendChild(f);
   exps.slice(0,15).forEach(function(e){L.appendChild(el('p','hint',(e.exp_date||'')+' · '+e.category+' · '+tk(e.amount)+(e.note?' · '+e.note:'')))});
 
-  L.appendChild(el('h2','','Completed jobs ('+jobs.length+')'));
-  jobs.forEach(function(b){
-    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',b.code+' · '+b.customer));r.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));c.appendChild(r);
-    c.appendChild(el('p','hint',b.booking_date+' · '+techName(b.tech_id)));
-    c.appendChild(el('p','bl','Bill '+tk(bill(b))+' · Commission '+tk(accComm(b))));
-    var ac=el('div','acts');
-    ac.appendChild(btn(b.pay_mode==='online'?'Mark as cash':'Mark as online (paid to company)','',async function(){
-      var x=await sb.from('bookings').update({pay_mode:b.pay_mode==='online'?'cash':'online'}).eq('id',b.id);
-      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
-    c.appendChild(ac);L.appendChild(c)});
+  var completeLink=el('button','completed-link');
+  completeLink.type='button';
+  completeLink.innerHTML='<span>✓</span><b>Completed Jobs ('+jobs.length+')</b><small>Open separate row-wise section</small><strong>›</strong>';
+  completeLink.onclick=function(){page='completed';renderAdmin()};
+  L.appendChild(completeLink);
 }
 function editExpense(e,card){
   if(card.classList.contains('editing'))return;
