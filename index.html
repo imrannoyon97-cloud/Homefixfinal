@@ -473,8 +473,7 @@ input::placeholder{color:#8fa6a1!important}
 <section class="view" id="v-track" hidden>
   <button class="back" data-go="home">&larr; Back</button>
   <h1>Track booking</h1>
-  <div class="f"><label for="trCode">Booking ID</label><input id="trCode" placeholder="HF-1022" autocomplete="off"></div>
-  <div class="f"><label for="trPhone">Phone number</label><input id="trPhone" type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></div>
+  <div class="f"><label for="trPhone">Booking-এর phone number</label><input id="trPhone" type="tel" inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></div>
   <button class="btn" id="trGo" type="button">Track</button>
   <div class="msg bad" id="trMsg"></div><div id="trOut"></div>
 </section>
@@ -1900,20 +1899,13 @@ window.renderTeam=function(L){
 })();
 </script>
 <script>
-/* ===== customer booking tracker ===== */
+/* ===== customer booking tracker (phone number only) ===== */
 (function(){
 var STEPS=['Booked','Technician assigned','On the way','Working','Complete'];
 function stage(r){if(r.status==='pending')return 0;var w=r.work_status;return w==='complete'?4:w==='working'?3:w==='on_the_way'?2:1}
-$('trGo').onclick=async function(){
-  var m=$('trMsg'),o=$('trOut');m.textContent='';o.innerHTML='';
-  var c=$('trCode').value.trim(),p=normPhone($('trPhone').value);
-  if(!c||!okPhone(p)){m.textContent='Booking ID আর সঠিক phone number দিন।';return}
-  if(!sb){m.textContent='App database-এর সাথে connected নয়।';return}
-  var x=await sb.rpc('track_booking',{p_code:c,p_phone:p});
-  if(x.error){m.textContent='Track করা যায়নি: '+x.error.message;return}
-  var r=x.data;if(!r){m.textContent='এই ID ও phone-এ কোনো booking পাওয়া যায়নি।';return}
+function card(r){
   var card=el('div','bc'),h=el('div','rw');h.appendChild(el('b','',r.code));
-  h.appendChild(el('span','chip',r.status==='cancelled'?'Cancelled':STEPS[stage(r)]));card.appendChild(h);
+  h.appendChild(el('span','chip'+(stage(r)===4?' ok':''),r.status==='cancelled'?'Cancelled':STEPS[stage(r)]));card.appendChild(h);
   card.appendChild(el('p','',[r.category,r.sub,r.service].filter(Boolean).join(' / ')));
   card.appendChild(el('p','',bnDate(r.booking_date)+', '+slotText(r.booking_time)));
   if(r.status!=='cancelled'){var st=stage(r);STEPS.forEach(function(n,i){card.appendChild(el('p','',(i<=st?'✅ ':'⬜ ')+n))})}
@@ -1924,10 +1916,21 @@ $('trGo').onclick=async function(){
     tb.appendChild(av);var tx=el('div','');tx.appendChild(el('b','',r.tech_name));tx.appendChild(el('p','','ID: '+(r.tech_code||'—')));
     if(r.tech_phone){var pp=el('p',''),a=el('a','',r.tech_phone);a.href='tel:'+r.tech_phone;pp.appendChild(a);tx.appendChild(pp)}
     tb.appendChild(tx);card.appendChild(tb);
-    card.appendChild(el('p','hint','Technician এসে এই code বললে বুঝবেন তিনিই HomeFix-এর: '+vcode(r)));
   }
-  o.appendChild(card);
-};
+  return card;
+}
+async function go(){
+  var m=$('trMsg'),o=$('trOut');m.textContent='';o.innerHTML='';
+  var p=normPhone($('trPhone').value);
+  if(!okPhone(p)){m.textContent='সঠিক phone number দিন (01XXXXXXXXX)।';return}
+  if(!sb){m.textContent='App database-এর সাথে connected নয়।';return}
+  var x=await sb.rpc('track_by_phone',{p_phone:p});
+  if(x.error){m.textContent='Track করা যায়নি: '+x.error.message;return}
+  var rows=x.data||[];if(!rows.length){m.textContent='এই নম্বরে কোনো booking পাওয়া যায়নি।';return}
+  rows.forEach(function(r){o.appendChild(card(r))});
+}
+$('trGo').onclick=go;
+$('trPhone').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go()}});
 })();
 </script>
 <script>
