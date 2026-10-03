@@ -133,6 +133,204 @@ body.hasnav main{padding-bottom:120px}
 .tile{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;text-align:left;font:inherit;color:var(--ink);cursor:pointer}
 .tile b{display:block;font-size:22px}.tile span{font-size:12px;color:var(--muted);font-weight:600}
 details.bc summary{cursor:pointer}
+
+/* ===== HomeFix colourful compact refresh ===== */
+:root{
+  --bg:#f5f7fb;--ink:#182337;--muted:#667085;--accent:#635bff;--on-accent:#fff;
+  --line:#d9e1ef;--card:rgba(255,255,255,.94);--err:#dc3545;
+  --c1:#635bff;--c2:#00a884;--c3:#ff8a34;--c4:#e84393;--c5:#0ea5e9;
+}
+body{
+  position:relative;overflow-x:hidden;
+  background:
+    radial-gradient(circle at 8% 8%,rgba(99,91,255,.14),transparent 24%),
+    radial-gradient(circle at 92% 18%,rgba(0,168,132,.12),transparent 23%),
+    linear-gradient(135deg,#f8fbff,#eef3fa);
+}
+body::before{
+  content:"🔧  ⚡  🪛  🔌  ❄️  🚿  🧰  🪚  💡  🔩  🔧  🛠️  🔌  🚿";
+  position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.10;
+  font-size:34px;line-height:2.5;letter-spacing:18px;
+  transform:rotate(-9deg) scale(1.12);
+  white-space:pre-wrap;word-spacing:26px;
+}
+main{max-width:410px;padding:16px 14px 78px}
+.logo.big{font-size:clamp(38px,12vw,52px);margin-top:8px}
+.tag{font-size:18px;margin:10px 0 0}
+.run{margin-top:28px;padding-left:24px;gap:10px}
+.run::before{left:7px;top:24px;bottom:24px;width:2px}
+.opt{min-height:50px;border-radius:13px;font-size:15px;padding:0 15px;box-shadow:0 5px 16px rgba(35,48,75,.07)}
+.opt.primary{min-height:56px;font-size:17px}
+.top{margin-bottom:16px}
+h1{font-size:28px;margin-bottom:16px}
+h2{font-size:18px}
+.f{padding-left:22px;margin-bottom:12px}
+.f::after{width:14px;height:14px;top:7px;border-width:2px}
+.cust .f::before{left:6px;width:2px}
+input,select{min-height:46px;border-radius:10px;border-width:1.5px;font-size:15px}
+.price span{min-height:46px;padding:0 11px;border-width:1.5px;border-radius:10px 0 0 10px}
+.price input{border-radius:0 10px 10px 0}
+.bk,.bc,.sum{border-width:1.5px;border-radius:14px;padding:13px;margin-bottom:10px}
+.bk{padding-bottom:1px}
+.btn{min-height:50px;border-radius:12px;font-size:16px;margin-top:9px;box-shadow:0 7px 18px rgba(99,91,255,.12)}
+.btn.ghost{min-height:46px;font-size:15px}
+.tabs{gap:6px;margin-bottom:10px}
+.tab{min-height:38px;border-width:1.5px;border-radius:10px;font-size:11px}
+.tile{border-width:1.5px;border-radius:12px;padding:10px;box-shadow:0 5px 15px rgba(35,48,75,.05)}
+.tile b{font-size:19px}
+.tile span{font-size:11px}
+.acts{gap:6px;margin-top:10px}
+.sb{min-height:36px;border-width:1.5px;border-radius:9px;font-size:12px;padding:0 10px}
+.chip{font-size:10px;padding:3px 8px}
+.bc .nm{font-size:15px;margin-top:8px}
+.bc p{font-size:12px;margin:4px 0}
+.anav{background:rgba(255,255,255,.96);border-top:1px solid #d9e1ef;box-shadow:0 -8px 22px rgba(35,48,75,.08)}
+.anav button{font-size:9px;padding:7px 0 6px}
+.anav svg{width:20px;height:20px}
+.anav .nw .ic{width:48px;height:48px;margin-top:-19px;border-width:2px;box-shadow:0 5px 14px rgba(99,91,255,.25)}
+.sheet form{max-width:410px;padding:16px 14px calc(18px + env(safe-area-inset-bottom,0px));border-radius:18px 18px 0 0}
+.sheet input{margin-top:5px}
+.hisab-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px
+}
+.hisab-head .badge{
+  background:linear-gradient(135deg,var(--c1),var(--c4));color:#fff;border-radius:99px;
+  padding:5px 9px;font-size:10px;font-weight:800
+}
+.exp-card{background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,249,255,.96))}
+.exp-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.exp-amount{font-size:18px;font-weight:800;color:var(--c2)}
+.editing{outline:2px solid rgba(99,91,255,.3);background:#f6f5ff}
+.tool-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 12px}
+.tool-strip span{
+  display:flex;align-items:center;justify-content:center;gap:3px;min-height:35px;border-radius:10px;
+  background:rgba(255,255,255,.78);border:1px solid rgba(180,192,215,.55);font-size:10px;font-weight:800
+}
+@media(max-width:360px){main{padding-left:10px;padding-right:10px}.tool-strip{grid-template-columns:repeat(2,1fr)}}
+
+
+/* HomeFix Calm Theme — softer logo + Bengali typography */
+:root{
+  --bg:#F5F7F4;
+  --ink:#29443F;
+  --muted:#71817D;
+  --accent:#6FA89A;
+  --on-accent:#FFFFFF;
+  --line:#D7E2DE;
+  --card:#FFFFFF;
+  --err:#B85C5C;
+}
+body{
+  background:
+    radial-gradient(circle at 12% 8%, rgba(111,168,154,.10), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(185,205,196,.14), transparent 30%),
+    var(--bg);
+}
+body::before{
+  content:"🔧   ⚡   🪛   🔌   ❄️   🚿   🧰   💡   🔩";
+  position:fixed; inset:0; z-index:-1; pointer-events:none;
+  opacity:.045; font-size:30px; line-height:3.8;
+  letter-spacing:20px; word-spacing:14px;
+  transform:rotate(-10deg) scale(1.15);
+  white-space:pre-wrap;
+}
+main{max-width:440px;padding:24px 20px 56px}
+.logo{
+  color:#29443F;
+  letter-spacing:-.055em;
+  text-shadow:0 2px 12px rgba(41,68,63,.06);
+}
+.logo .o{color:#6FA89A}
+.logo svg{color:#527E74; filter:drop-shadow(0 2px 5px rgba(82,126,116,.12))}
+.logo.big{
+  font-size:clamp(46px,15vw,62px);
+  margin-top:18px;
+}
+.logo.sm{font-size:27px}
+.tag{
+  font-family:'Hind Siliguri',sans-serif;
+  color:#365A53;
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:-.01em;
+  margin-top:16px;
+}
+.sub,.hint,.who{color:#71817D}
+.run{margin-top:42px;gap:12px}
+.opt{
+  border-color:#D7E2DE;
+  background:rgba(255,255,255,.88);
+  color:#29443F;
+  box-shadow:0 6px 18px rgba(41,68,63,.055);
+}
+.opt::before{border-color:#B8CCC5;background:#F5F7F4}
+.opt.primary{
+  background:#6FA89A;
+  border-color:#6FA89A;
+  box-shadow:0 8px 20px rgba(111,168,154,.20);
+}
+.opt.primary::before{background:#6FA89A;border-color:#6FA89A}
+h1,h2{color:#29443F}
+h1{font-family:'Hind Siliguri',Montserrat,sans-serif;font-weight:700}
+label{
+  font-family:'Hind Siliguri',Montserrat,sans-serif;
+  color:#45645E;
+}
+input,select{
+  border-color:#D7E2DE;
+  background:#FFFFFF;
+  color:#29443F;
+  box-shadow:0 3px 12px rgba(41,68,63,.035);
+}
+input:focus-visible,select:focus-visible,.btn:focus-visible,.rm:focus-visible{
+  outline:3px solid rgba(111,168,154,.30);
+}
+.price span,.btn,.sb.pri{
+  background:#6FA89A;
+  border-color:#6FA89A;
+}
+.btn{box-shadow:0 7px 16px rgba(111,168,154,.15)}
+.btn.ghost{
+  border-color:#C9D9D4;
+  color:#45645E;
+  background:rgba(255,255,255,.55);
+}
+.bk,.bc,.sum,.tile,.sheet form{
+  background:rgba(255,255,255,.92);
+  border-color:#D7E2DE;
+  box-shadow:0 6px 20px rgba(41,68,63,.045);
+}
+.chip{background:#29443F;color:#F5F7F4}
+.chip.new,.chip.ok{background:#8BBCAF;color:#fff}
+.tabs .tab{
+  border-color:#D7E2DE;
+  color:#4A6761;
+  background:rgba(255,255,255,.62);
+}
+.tab[aria-pressed=true]{
+  background:#29443F;
+  color:#fff;
+  border-color:#29443F;
+}
+.anav{
+  background:rgba(255,255,255,.96);
+  border-top-color:#D7E2DE;
+  box-shadow:0 -5px 18px rgba(41,68,63,.05);
+}
+.anav button[aria-pressed=true]{color:#6FA89A}
+.anav .nw .ic{
+  background:#6FA89A;
+  border-color:#F5F7F4;
+  box-shadow:0 5px 14px rgba(111,168,154,.22);
+}
+.tile b{color:#29443F}
+.tile span{font-family:'Hind Siliguri',sans-serif;color:#71817D}
+.nm{font-family:'Hind Siliguri',sans-serif}
+.acts .sb{border-color:#D0DDD9}
+.sb{color:#45645E;background:rgba(255,255,255,.72)}
+.sb.del{color:#B85C5C;border-color:#E2BABA}
+.id{background:#6FA89A}
+
 </style>
 </head>
 <body>
@@ -140,7 +338,7 @@ details.bc summary{cursor:pointer}
 
 <section class="view" id="v-home">
   <div class="logo big"><span class="o">H</span>ome<span class="o">Fi</span><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 54 42 24" stroke-width="7"/><path d="M36 10l18 18" stroke-width="11"/><path d="M52 54 24 26" stroke-width="7"/><path d="M13 13a9.5 9.5 0 1 0 15 4" stroke-width="6"/></svg></div>
-  <p class="tag">সমস্যা জানান, সমাধান আমরা করি।</p>
+  <p class="tag">সমস্যা জানান, সমাধান আমরা করি।</p><p class="sub brand-sub">আপনার ঘরের যত্নে, HomeFix পাশে।</p>
   <div class="run">
     <button class="opt primary" data-go="booking">Booking</button>
     <button class="opt" data-go="login">Login</button>
@@ -372,7 +570,7 @@ function billSheet(b,admin,done){
   var add=el('button','btn ghost','+ Add work item');add.type='button';add.onclick=function(){list.push({n:'',a:0});draw();upd()};f.appendChild(add);
   if(admin){var w=el('div','sf');w.style.marginTop='14px';var dI=document.createElement('input');dI.type='number';dI.min=0;dI.inputMode='decimal';dI.value=disc;
     dI.oninput=function(){disc=+dI.value||0;upd()};w.appendChild(el('label','','Discount (৳)'));w.appendChild(dI);f.appendChild(w)}
-  var sv=el('button','btn','Save bill'),cn=el('button','btn ghost','Cancel');sv.type=cn.type='button';
+  var sv=el('button','btn','💾 Save bill'),cn=el('button','btn ghost','Cancel');sv.type=cn.type='button';
   cn.onclick=function(){sh.remove()};sh.onclick=function(e){if(e.target===sh)sh.remove()};
   sv.onclick=async function(){
     if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every work item needs a name.';return}
@@ -662,6 +860,13 @@ function accField(tag,ph,type){var i=document.createElement(tag);if(type)i.type=
 function accSel(list){var s=accField('select');list.forEach(function(v){var o=el('option','',v);o.value=v;s.appendChild(o)});return s}
 
 function renderHisab(L){
+  var tools=el('div','tool-strip');
+  [['🔧','Tools'],['⚡','Electrical'],['🚿','Plumbing'],['❄️','AC & Fridge']].forEach(function(x){
+    var s=el('span');s.appendChild(document.createTextNode(x[0]+' '+x[1]));tools.appendChild(s);
+  });
+  L.appendChild(tools);
+  var hh=el('div','hisab-head');hh.appendChild(el('h2','', '💰 হিসাব খাতা'));hh.appendChild(el('span','badge','LIVE'));
+  L.appendChild(hh);
   L.appendChild(accTabs(renderAdmin));
   var all=accDone(bks),jobs=all.filter(function(b){return accInD(b.booking_date)});
   var exps=accExps.filter(function(e){return accInD(e.exp_date||e.created_at)});
@@ -702,6 +907,22 @@ function renderHisab(L){
       var x=await sb.from('bookings').update({pay_mode:b.pay_mode==='online'?'cash':'online'}).eq('id',b.id);
       if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
     c.appendChild(ac);L.appendChild(c)});
+}
+function editExpense(e,card){
+  if(card.classList.contains('editing'))return;
+  card.classList.add('editing');card.innerHTML='';
+  var h=el('b','','✏️ Edit expense');
+  var cat=accSel(['Parts / Material','Transport','Marketing','Office','Other']);cat.value=e.category||'Other';
+  var amt=accField('input','Amount','number');amt.value=e.amount||0;amt.inputMode='numeric';
+  var note=accField('input','Note');note.value=e.note||'';
+  var ac=el('div','acts');
+  ac.appendChild(btn('Save','pri',async function(){
+    if(!(+amt.value>0)){$('dashNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_expenses').update({category:cat.value,amount:+amt.value,note:note.value.trim()}).eq('id',e.id);
+    if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin();
+  }));
+  ac.appendChild(btn('Cancel','',function(){renderAdmin()}));
+  card.appendChild(h);card.appendChild(cat);card.appendChild(amt);card.appendChild(note);card.appendChild(ac);
 }
 async function accSet(id,status){var x=await sb.from('acc_deposits').update({status:status}).eq('id',id);if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}
 
