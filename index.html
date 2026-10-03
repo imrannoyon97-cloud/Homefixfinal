@@ -680,7 +680,7 @@ async function enter(){
 async function logout(){window.isAdm=false;$('bkBack').dataset.go='home';if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
 $('dashOut').addEventListener('click',logout);$('techOut').addEventListener('click',logout);
 function listen(fn){if(channel)sb.removeChannel(channel);
-  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).subscribe()}
+  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).on('postgres_changes',{event:'*',schema:'public',table:'acc_deposits'},fn).subscribe()}
 $('anav').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;
   if(b.dataset.p==='new'){$('bkBack').dataset.go='dash';document.querySelectorAll('#anav [data-p]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});show('booking');return}
   page=b.dataset.p;show('dash');renderAdmin()});
@@ -759,6 +759,7 @@ function billSheet(b,admin,done){
       console.warn('Service transaction sync failed',tr.error);
     }
     sh.remove();if(done)done();
+    if(admin){Object.assign(b,d);if(confirm('Bill save হয়েছে। Invoice (PDF) download করবেন?'))invoice(b)}
   };
   upd();f.appendChild(tot);f.appendChild(err);f.appendChild(sv);f.appendChild(cn);sh.appendChild(f);document.body.appendChild(sh);
 }
@@ -986,6 +987,7 @@ function renderCompletedJobs(L){
     right.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer','done')}));
     right.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));
     var ac=el('div','row-actions');
+    ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
     ac.appendChild(btn('Edit','',function(){billSheet(b,true,loadAdmin)}));
     ac.appendChild(btn('Delete','del',async function(){
       if(!confirm('Delete completed booking '+b.code+' permanently?'))return;
@@ -1765,6 +1767,8 @@ body::before{
         ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
         ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer')}));
         ac.appendChild(btn('Not yet','',function(){upd(b.id,{work_status:'not_yet'})}));
+        ac.appendChild(btn('Bill','primary',function(){billSheet(b,true,loadAdmin)}));
+        ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
         ac.appendChild(btn('On the way','',function(){upd(b.id,{work_status:'on_the_way'})}));
         ac.appendChild(btn('Working','primary',function(){upd(b.id,{work_status:'working'})}));
         ac.appendChild(btn('Complete','primary',function(){upd(b.id,{work_status:'complete'})}));
@@ -1924,6 +1928,41 @@ $('trGo').onclick=async function(){
   }
   o.appendChild(card);
 };
+})();
+</script>
+<script>
+/* ===== admin: technician deposits to confirm ===== */
+(function(){
+function pend(){return accDeps.filter(function(d){return d.status==='pending'})}
+var ra=window.renderAdmin;
+window.renderAdmin=function(){
+  ra.apply(this,arguments);
+  if(page!=='dash')return;
+  var n=pend().length,T=$('tabs');if(!n||!T)return;
+  var a=el('button','new-alert');a.type='button';a.onclick=function(){page='txn';renderAdmin()};
+  a.appendChild(el('span','alert-dot','●'));
+  var w=el('div');w.appendChild(el('b','','Technician deposit pending'));w.appendChild(el('span','',n+' deposit confirm করার অপেক্ষায়'));
+  a.appendChild(w);a.appendChild(el('span','alert-arrow','›'));T.parentNode.insertBefore(a,T);
+};
+function depSection(L){
+  var p=pend(),h=el('div','section-head');h.appendChild(el('h2','','Technician deposits'));h.appendChild(el('span','mini-badge',p.length+' pending'));L.appendChild(h);
+  if(!p.length)L.appendChild(el('p','hint','কোনো pending deposit নেই।'));
+  p.forEach(function(d){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',techName(d.technician_id)));r.appendChild(el('span','chip new',tk(d.amount)));c.appendChild(r);
+    c.appendChild(el('p','hint',[d.kind==='payout'?'Company paid':'Deposit',d.method,d.trx_id?'TrxID '+d.trx_id:'',new Date(d.created_at).toLocaleString()].filter(Boolean).join(' · ')));
+    var a=el('div','acts');
+    a.appendChild(btn('Confirm','pri',function(){accSet(d.id,'confirmed')}));
+    a.appendChild(btn('Reject','del',function(){if(confirm('এই deposit reject করবেন?'))accSet(d.id,'rejected')}));
+    c.appendChild(a);L.appendChild(c)});
+  accDeps.filter(function(d){return d.status!=='pending'}).slice(0,5).forEach(function(d){
+    L.appendChild(el('p','hint',techName(d.technician_id)+' · '+tk(d.amount)+' · '+d.status+' · '+new Date(d.created_at).toLocaleDateString()))});
+  var rows=users.filter(function(u){return u.role==='technician'}).map(function(u){
+    return [u,accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}))]}).filter(function(x){return x[1]!==0});
+  if(rows.length){var s=el('div','bc');s.appendChild(el('b','','Technician balance'));
+    rows.forEach(function(x){s.appendChild(el('p','',(x[0].tech_code?x[0].tech_code+' · ':'')+(x[0].name||x[0].email)+' — '+(x[1]>0?'Owes company '+tk(x[1]):'Company owes '+tk(-x[1]))))});L.appendChild(s)}
+}
+var rt=window.renderTransactions;
+window.renderTransactions=function(L){depSection(L);return rt.call(this,L)};
 })();
 </script>
 </body>
