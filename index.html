@@ -388,7 +388,7 @@ function invoice(b){
 
 // ================= admin =================
 var bks=[],users=[],tab='new';
-var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled'],['team','Team']];
+var TABS=[['new','New'],['active','Active'],['done','Done'],['cancelled','Cancelled'],['hisab','Hisab'],['team','Team']];
 function startAdmin(){
   show('dash');$('dashWho').textContent='Logged in as '+(me.name||me.email)+' (admin)';
   loadAdmin();listen(loadAdmin);
@@ -397,7 +397,9 @@ async function loadAdmin(){
   var a=await sb.from('bookings').select('*').order('created_at',{ascending:false});
   var u=await sb.from('profiles').select('*').order('created_at',{ascending:false});
   if(a.error||u.error){$('dashNote').textContent='Could not load data.';return}
-  bks=a.data||[];users=u.data||[];$('dashNote').textContent='';renderAdmin();
+  var dp=await sb.from('acc_deposits').select('*').order('created_at',{ascending:false});var xp=await sb.from('acc_expenses').select('*').order('created_at',{ascending:false});
+  accDeps=dp.data||[];accExps=xp.data||[];
+  bks=a.data||[];users=u.data||[];$('dashNote').textContent=(dp.error||xp.error)?'Hisab tables missing: run the SQL in Supabase.':'';renderAdmin();
 }
 function inTab(b,t){
   if(t==='new')return b.status==='pending';
@@ -431,10 +433,11 @@ function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='bu
 function renderAdmin(){
   var T=$('tabs');T.innerHTML='';
   TABS.forEach(function(t){
-    var n=t[0]==='team'?users.filter(function(u){return u.role==='pending'}).length:bks.filter(function(b){return inTab(b,t[0])}).length;
+    var n=t[0]==='hisab'?accDeps.filter(function(d){return d.status==='pending'}).length:t[0]==='team'?users.filter(function(u){return u.role==='pending'}).length:bks.filter(function(b){return inTab(b,t[0])}).length;
     var x=el('button','tab',t[1]+(n?' ('+n+')':''));x.type='button';x.setAttribute('aria-pressed',tab===t[0]);x.onclick=function(){tab=t[0];renderAdmin()};T.appendChild(x)});
   var L=$('list');L.innerHTML='';
   if(tab==='team')return renderTeam(L);
+  if(tab==='hisab')return renderHisab(L);
   var rows=bks.filter(function(b){return inTab(b,tab)});
   if(!rows.length)L.appendChild(el('p','hint','Nothing here yet.'));
   rows.forEach(function(b){
@@ -484,10 +487,11 @@ function startTech(){show('tjobs');$('techWho').textContent='Logged in as '+(me.
 async function loadTech(){
   var r=await sb.from('bookings').select('*').eq('tech_id',me.id).eq('status','confirmed');
   if(r.error){$('tNote').textContent='Could not load your jobs.';return}
-  tJobs=r.data||[];$('tNote').textContent='';renderTech();
+  var dp=await sb.from('acc_deposits').select('*').eq('technician_id',me.id).order('created_at',{ascending:false});accDeps=dp.data||[];
+  tJobs=r.data||[];$('tNote').textContent=dp.error?'Hisab tables missing: ask admin.':'';renderTech();
 }
 function renderTech(){
-  var L=$('tlist');L.innerHTML='';
+  var L=$('tlist');L.innerHTML='';renderTechAcc(L);
   var rows=tJobs.slice().sort(function(a,b){var ad=a.work_status==='complete',bd=b.work_status==='complete';return (ad-bd)||String(a.booking_date+a.booking_time).localeCompare(String(b.booking_date+b.booking_time))});
   if(!rows.length)L.appendChild(el('p','hint','No jobs assigned yet.'));
   rows.forEach(function(b){
@@ -505,6 +509,120 @@ function renderTech(){
     ac.appendChild(btn('Invoice','',function(){invoice(b)}));
     c.appendChild(ac);L.appendChild(c);
   });
+}
+
+// ================= HISAB (accounts) =================
+var accDeps=[],accExps=[],accRange='month';
+function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
+function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
+function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
+function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
+function accPct(id){var u=(me&&id===me.id)?me:users.filter(function(x){return x.id===id})[0];return u&&u.commission_pct!=null?+u.commission_pct:60}
+function accComm(b){return Math.round(bill(b)*accPct(b.tech_id))/100}
+function accColl(b){return b.pay_mode==='online'?0:bill(b)}
+// positive = technician owes company, negative = company owes technician
+function accBal(jobs,deps){
+  return sumOf(jobs,accColl)-sumOf(jobs,accComm)
+   -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
+   +sumOf(deps.filter(function(d){return d.kind==='payout'&&d.status==='confirmed'}),function(d){return d.amount});
+}
+function accTabs(fn){
+  var T=el('div','tabs');
+  [['today','Today'],['month','This month'],['all','All']].forEach(function(r){
+    var x=el('button','tab',r[1]);x.type='button';x.setAttribute('aria-pressed',accRange===r[0]);
+    x.onclick=function(){accRange=r[0];fn()};T.appendChild(x)});
+  return T;
+}
+function accSum(rows){
+  var s=el('div','sum');
+  rows.forEach(function(r){var d=el('div');d.appendChild(el('span','',r[0]));var b=el('b','',r[1]);if(r[2])b.style.color=r[2];d.appendChild(b);s.appendChild(d)});
+  return s;
+}
+function accField(tag,ph,type){var i=document.createElement(tag);if(type)i.type=type;if(ph)i.placeholder=ph;i.style.marginTop='8px';return i}
+function accSel(list){var s=accField('select');list.forEach(function(v){var o=el('option','',v);o.value=v;s.appendChild(o)});return s}
+
+function renderHisab(L){
+  L.appendChild(accTabs(renderAdmin));
+  var all=accDone(bks),jobs=all.filter(function(b){return accInD(b.booking_date)});
+  var exps=accExps.filter(function(e){return accInD(e.exp_date||e.created_at)});
+  var inc=sumOf(jobs,bill),cm=sumOf(jobs,accComm),ex=sumOf(exps,function(e){return e.amount}),net=inc-cm-ex;
+  L.appendChild(accSum([['Income',tk(inc)],['Technician commission',tk(cm)],['Other expense',tk(ex)],['Net profit',tk(net),net<0?'var(--err)':null]]));
+
+  var pend=accDeps.filter(function(d){return d.status==='pending'});
+  if(pend.length){
+    L.appendChild(el('h2','','Deposits to confirm'));
+    pend.forEach(function(d){
+      var c=el('div','bc');c.appendChild(el('b','',techName(d.technician_id)+' · '+tk(d.amount)));
+      c.appendChild(el('p','hint',(d.method||'')+' '+(d.trx_id||'')));
+      var ac=el('div','acts');
+      ac.appendChild(btn('Confirm','pri',function(){accSet(d.id,'confirmed')}));
+      ac.appendChild(btn('Reject','del',function(){accSet(d.id,'rejected')}));
+      c.appendChild(ac);L.appendChild(c)});
+  }
+
+  L.appendChild(el('h2','','Technician balance'));
+  var techs=users.filter(function(u){return u.role==='technician'});
+  if(!techs.length)L.appendChild(el('p','hint','No technicians yet.'));
+  techs.forEach(function(t){
+    var b=accBal(all.filter(function(j){return j.tech_id===t.id}),accDeps.filter(function(d){return d.technician_id===t.id}));
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',techName(t.id)));
+    r.appendChild(el('span','chip st',accPct(t.id)+'%'));c.appendChild(r);
+    c.appendChild(el('p','bl',b>=0?'Owes company '+tk(b):'Company owes '+tk(-b)));
+    var ac=el('div','acts');
+    ac.appendChild(btn('Set commission %','',async function(){
+      var v=prompt('Commission % for this technician',accPct(t.id));if(v===null)return;v=+v;
+      if(!(v>=0&&v<=100)){alert('0 - 100');return}
+      var x=await sb.from('profiles').update({commission_pct:v}).eq('id',t.id);
+      if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
+    if(b<0)ac.appendChild(btn('Paid out','pri',async function(){
+      var x=await sb.from('acc_deposits').insert({technician_id:t.id,kind:'payout',amount:-b,method:'Admin',status:'confirmed'});
+      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+    c.appendChild(ac);L.appendChild(c);
+  });
+
+  L.appendChild(el('h2','','Add expense'));
+  var f=el('div','bc'),cat=accSel(['Parts / Material','Transport','Marketing','Office','Other']),amt=accField('input','Amount','number'),note=accField('input','Note');
+  amt.inputMode='numeric';
+  f.appendChild(cat);f.appendChild(amt);f.appendChild(note);
+  var ac=el('div','acts');
+  ac.appendChild(btn('Save expense','pri',async function(){
+    if(!(+amt.value>0)){$('dashNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_expenses').insert({category:cat.value,amount:+amt.value,note:note.value.trim()});
+    if(x.error)$('dashNote').textContent='Could not save: '+x.error.message;else loadAdmin()}));
+  f.appendChild(ac);L.appendChild(f);
+  exps.slice(0,15).forEach(function(e){L.appendChild(el('p','hint',(e.exp_date||'')+' · '+e.category+' · '+tk(e.amount)+(e.note?' · '+e.note:'')))});
+
+  L.appendChild(el('h2','','Completed jobs ('+jobs.length+')'));
+  jobs.forEach(function(b){
+    var c=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',b.code+' · '+b.customer));r.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));c.appendChild(r);
+    c.appendChild(el('p','hint',b.booking_date+' · '+techName(b.tech_id)));
+    c.appendChild(el('p','bl','Bill '+tk(bill(b))+' · Commission '+tk(accComm(b))));
+    var ac=el('div','acts');
+    ac.appendChild(btn(b.pay_mode==='online'?'Mark as cash':'Mark as online (paid to company)','',async function(){
+      var x=await sb.from('bookings').update({pay_mode:b.pay_mode==='online'?'cash':'online'}).eq('id',b.id);
+      if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}));
+    c.appendChild(ac);L.appendChild(c)});
+}
+async function accSet(id,status){var x=await sb.from('acc_deposits').update({status:status}).eq('id',id);if(x.error)$('dashNote').textContent=x.error.message;else loadAdmin()}
+
+function renderTechAcc(L){
+  var all=accDone(tJobs),jobs=all.filter(function(b){return accInD(b.booking_date)});
+  var bal=accBal(all,accDeps),pend=sumOf(accDeps.filter(function(d){return d.kind==='joma'&&d.status==='pending'}),function(d){return d.amount});
+  var box=el('div');box.appendChild(el('h2','','My income'));box.appendChild(accTabs(renderTech));
+  box.appendChild(accSum([['Jobs done',String(jobs.length)],['My commission',tk(sumOf(jobs,accComm))],['Cash collected',tk(sumOf(jobs,accColl))],
+    [bal>=0?'I must deposit (Due)':'Company owes me',tk(Math.abs(bal)),bal>0?'var(--err)':null]]));
+  if(pend)box.appendChild(el('p','hint','Waiting for admin to confirm: '+tk(pend)));
+  var f=el('div','bc'),amt=accField('input','Amount deposited','number'),m=accSel(['bKash','Nagad','Cash']),t=accField('input','Transaction ID');
+  amt.inputMode='numeric';f.appendChild(amt);f.appendChild(m);f.appendChild(t);
+  var ac=el('div','acts');
+  ac.appendChild(btn('I deposited','pri',async function(){
+    if(!(+amt.value>0)){$('tNote').textContent='Enter an amount.';return}
+    var x=await sb.from('acc_deposits').insert({technician_id:me.id,kind:'joma',amount:+amt.value,method:m.value,trx_id:t.value.trim()});
+    if(x.error)$('tNote').textContent='Could not save: '+x.error.message;else loadTech()}));
+  f.appendChild(ac);box.appendChild(f);
+  accDeps.slice(0,8).forEach(function(d){box.appendChild(el('p','hint',new Date(d.created_at).toLocaleDateString()+' · '+(d.kind==='joma'?'Deposited ':'Company paid ')+tk(d.amount)+' · '+d.status))});
+  box.appendChild(el('h2','','My jobs'));
+  L.appendChild(box);
 }
 </script>
 </body>
