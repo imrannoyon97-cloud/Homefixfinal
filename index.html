@@ -1965,5 +1965,138 @@ var rt=window.renderTransactions;
 window.renderTransactions=function(L){depSection(L);return rt.call(this,L)};
 })();
 </script>
+<style>
+.tx-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.tx-card{border:1.5px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04)}
+.tx-card small{display:block;opacity:.75;font-size:11px}.tx-card b{font-size:16px}
+.tx-in{color:#5fd7a8}.tx-out{color:#ff8f87}.tx-dep{color:#8ec5ff}
+.tx-chips{display:flex;gap:6px;overflow-x:auto;margin:8px 0;padding-bottom:2px}
+.tx-chips button{flex:none;font:inherit;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.18);background:transparent;color:inherit}
+.tx-chips button.on{background:#5fa89a;border-color:#5fa89a;color:#08221c}
+.tx-day{display:flex;justify-content:space-between;font-size:12px;opacity:.85;margin:14px 2px 6px}
+.tx-row{border:1.5px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.04)}
+.tx-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;cursor:pointer}
+.tx-top .t{font-weight:700}.tx-top small{display:block;opacity:.7;font-size:12px;margin-top:2px}
+.tx-amt{font-weight:800;white-space:nowrap;text-align:right}.tx-amt small{display:block;font-weight:400;opacity:.7;font-size:11px}
+.tx-tag{font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.25);margin-left:6px;opacity:.85;font-weight:400}
+.tx-add{border:1.5px solid rgba(255,255,255,.14);border-radius:16px;padding:12px;margin:10px 0}
+.tx-add input,.tx-add select{width:100%;margin-top:8px}
+.tx-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tx-seg button{font:inherit;font-weight:800;padding:12px;border-radius:12px;border:2px solid rgba(255,255,255,.18);background:transparent;color:inherit}
+.tx-seg button.in.on{background:#1f6f55;border-color:#5fd7a8}.tx-seg button.out.on{background:#7a2f2b;border-color:#ff8f87}
+</style>
+<script>
+/* ===== Transactions page v2: live ledger (jobs + manual + deposits) ===== */
+(function(){
+var R='month',T='all',Q='',OPEN=false,DIR='IN',CAT='Service';
+function pad(n){return String(n).padStart(2,'0')}
+function ymd(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())}
+function dOnly(v){var s=String(v||'');if(s.length>10&&s.indexOf('T')>0){var x=new Date(s);if(!isNaN(x))return ymd(x)}return s.slice(0,10)}
+function inR(d){if(R==='all')return true;var t=today();if(R==='today')return d===t;if(R==='week'){var x=new Date();x.setDate(x.getDate()-6);return d>=ymd(x)&&d<=t}return d.slice(0,7)===t.slice(0,7)}
+function pretty(d){try{return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}catch(e){return d}}
+function entries(){
+  var done=accDone(bks),ids={},E=[];done.forEach(function(b){ids[b.id]=1});
+  (Array.isArray(accTxns)?accTxns:[]).forEach(function(t){
+    if(t.category==='Service'&&t.booking_id&&ids[t.booking_id])return;
+    E.push({k:'manual',t:t,date:dOnly(t.transaction_date||t.created_at),dir:t.direction==='OUT'?'OUT':'IN',amt:Math.abs(+t.amount||0),type:t.category==='Parts'?'Parts':t.category==='Other'?'Other':'Service',
+      title:t.title||t.part_name||t.category||'Entry',sub:[t.customer,t.technician_name,t.note].filter(Boolean).join(' · '),way:t.payment_way||t.way||''});
+  });
+  done.forEach(function(b){E.push({k:'job',b:b,date:dOnly(b.booking_date),dir:'IN',amt:bill(b),type:'Service',
+    title:b.code+' · '+(b.service||b.category||'Service'),sub:[b.customer,techName(b.tech_id)].filter(Boolean).join(' · '),way:b.pay_mode==='online'?'Online':'Cash'})});
+  accDeps.filter(function(d){return d.status==='confirmed'}).forEach(function(d){E.push({k:'dep',d:d,date:dOnly(d.created_at),dir:'DEP',amt:+d.amount||0,type:'Deposit',
+    title:(d.kind==='payout'?'Company paid ':'Deposit from ')+techName(d.technician_id),sub:[d.method,d.trx_id?'Trx '+d.trx_id:''].filter(Boolean).join(' · '),way:d.method||''})});
+  return E.sort(function(a,b){return b.date.localeCompare(a.date)});
+}
+function visible(){var q=Q.trim().toLowerCase();return entries().filter(function(e){
+  if(!inR(e.date))return false;if(T!=='all'&&e.type!==T)return false;
+  return !q||(e.title+' '+e.sub+' '+e.way+' '+e.type).toLowerCase().indexOf(q)>-1})}
+function totals(v){var i=0,o=0,d=0;v.forEach(function(e){if(e.dir==='IN')i+=e.amt;else if(e.dir==='OUT')o+=e.amt;else d+=e.amt});return{i:i,o:o,n:i-o,d:d}}
+function dues(){return users.filter(function(u){return u.role==='technician'}).reduce(function(t,u){
+  var v=accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));return t+(v>0?v:0)},0)}
+function chips(list,cur,fn){var w=el('div','tx-chips');list.forEach(function(x){var b=el('button',cur===x[0]?'on':'',x[1]);b.type='button';b.onclick=function(){fn(x[0]);renderAdmin()};w.appendChild(b)});return w}
+function pending(L){
+  var p=accDeps.filter(function(d){return d.status==='pending'});if(!p.length)return;
+  var h=el('div','section-head');h.appendChild(el('h2','','Deposit confirm করুন'));h.appendChild(el('span','mini-badge',p.length+' pending'));L.appendChild(h);
+  p.forEach(function(d){
+    var c=el('div','tx-row'),top=el('div','tx-top');var l=el('div');l.appendChild(el('div','t',techName(d.technician_id)));
+    l.appendChild(el('small','',[d.method,d.trx_id?'Trx '+d.trx_id:'',new Date(d.created_at).toLocaleString()].filter(Boolean).join(' · ')));
+    top.appendChild(l);top.appendChild(el('div','tx-amt tx-dep',tk(d.amount)));c.appendChild(top);
+    var a=el('div','acts');a.appendChild(btn('✓ Confirm','pri',function(){accSet(d.id,'confirmed')}));
+    a.appendChild(btn('Reject','del',function(){if(confirm('এই deposit reject করবেন?'))accSet(d.id,'rejected')}));c.appendChild(a);L.appendChild(c)});
+}
+async function saveEntry(f){
+  if(!(+f.amt.value>0)){alert('Amount দিন');return}
+  var cat=CAT,note=f.note.value.trim();
+  var r=await sb.from('acc_transactions').insert({transaction_date:f.date.value||today(),direction:DIR,category:cat,amount:+f.amt.value,payment_way:f.way.value,way:f.way.value,
+    title:note||(cat==='Parts'?(f.part.value.trim()||'Parts'):cat),note:note||null,part_name:cat==='Parts'?(f.part.value.trim()||null):null,
+    quantity:cat==='Parts'?1:null,unit_price:cat==='Parts'?+f.amt.value:null,created_by:me&&me.id?me.id:null});
+  if(r.error){alert('Save হয়নি: '+r.error.message);return}
+  OPEN=false;await loadAdmin();
+}
+function addPanel(L){
+  var tg=btn(OPEN?'✕ Close':'➕ Add entry (খরচ / অন্য আয়)','pri',function(){OPEN=!OPEN;renderAdmin()});tg.style.marginBottom='8px';L.appendChild(tg);
+  if(!OPEN)return;
+  var box=el('div','tx-add'),seg=el('div','tx-seg'),f={};
+  [['IN','Money in','in'],['OUT','Money out','out']].forEach(function(x){var b=el('button',x[2]+(DIR===x[0]?' on':''),(x[0]==='IN'?'＋ ':'− ')+x[1]);b.type='button';b.onclick=function(){DIR=x[0];renderAdmin()};seg.appendChild(b)});
+  box.appendChild(seg);
+  box.appendChild(chips([['Service','🛠 Service'],['Parts','🔩 Parts'],['Other','📦 Other']],CAT,function(v){CAT=v}));
+  f.amt=document.createElement('input');f.amt.type='number';f.amt.inputMode='numeric';f.amt.min='0';f.amt.placeholder='Amount ৳';box.appendChild(f.amt);
+  f.part=document.createElement('input');f.part.placeholder='Part-এর নাম';if(CAT==='Parts')box.appendChild(f.part);
+  f.note=document.createElement('input');f.note.placeholder='কী বাবদ? (note)';f.note.autocomplete='off';box.appendChild(f.note);
+  f.way=document.createElement('select');['Cash','bKash','Nagad','Bank'].forEach(function(x){var o=el('option','',x);o.value=x;f.way.appendChild(o)});box.appendChild(f.way);
+  f.date=document.createElement('input');f.date.type='date';f.date.value=today();box.appendChild(f.date);
+  var ac=el('div','acts');ac.appendChild(btn('Save','pri',function(){saveEntry(f)}));box.appendChild(ac);L.appendChild(box);
+}
+function csv(v){var q=function(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'};
+  var rows=[['Date','Type','Title','Details','Direction','Amount','Method']].concat(v.map(function(e){return [e.date,e.type,e.title,e.sub,e.dir,e.amt,e.way]}));
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(function(r){return r.map(q).join(',')}).join('\n')],{type:'text/csv'}));
+  a.download='HomeFix-transactions-'+today()+'.csv';document.body.appendChild(a);a.click();a.remove()}
+window.renderTransactions=function(L){
+  pending(L);
+  var h=el('div','section-head');h.appendChild(el('h2','','Transactions'));var cnt=el('span','mini-badge','');h.appendChild(cnt);L.appendChild(h);
+  var sum=el('div','tx-sum'),cs=[['Money in','tx-in'],['Money out','tx-out'],['Net','']].map(function(x){var c=el('div','tx-card'),v=el('b',x[1],'');c.appendChild(el('small','',x[0]));c.appendChild(v);sum.appendChild(c);return v});
+  L.appendChild(sum);var info=el('p','hint','');L.appendChild(info);
+  L.appendChild(chips([['today','Today'],['week','7 days'],['month','This month'],['all','All']],R,function(v){R=v}));
+  L.appendChild(chips([['all','All'],['Service','🛠 Service'],['Parts','🔩 Parts'],['Other','📦 Other'],['Deposit','🏦 Deposit']],T,function(v){T=v}));
+  var q=document.createElement('input');q.type='search';q.name='hf-tx-q';q.autocomplete='off';q.className='smart-search';q.placeholder='🔎 Booking, customer, technician…';q.value=Q;L.appendChild(q);
+  addPanel(L);
+  var list=el('div','');L.appendChild(list);
+  var bar=el('div','acts');L.appendChild(bar);
+  function draw(){
+    var v=visible(),t=totals(v);cnt.textContent=v.length+' entries';
+    cs[0].textContent=tk(t.i);cs[1].textContent=tk(t.o);cs[2].textContent=(t.n<0?'− ':'')+tk(Math.abs(t.n));cs[2].className=t.n<0?'tx-out':'tx-in';
+    info.textContent='Technician-দের কাছে বকেয়া '+tk(dues())+' · Deposit পাওয়া '+tk(t.d);
+    list.innerHTML='';if(!v.length){list.appendChild(el('p','hint','এই সময়ে কোনো entry নেই। উপরে "This month" বা "All" চাপুন।'));return}
+    var cur='',dayBox=null,dayNet=null,net=0;
+    v.forEach(function(e){
+      if(e.date!==cur){cur=e.date;net=0;var dh=el('div','tx-day');dh.appendChild(el('b','',pretty(cur)));dayNet=el('span','','');dh.appendChild(dayNet);list.appendChild(dh)}
+      net+=e.dir==='IN'?e.amt:e.dir==='OUT'?-e.amt:0;dayNet.textContent=(net<0?'− ':'+ ')+tk(Math.abs(net));
+      var r=el('div','tx-row'),top=el('div','tx-top'),l=el('div'),tt=el('div','t',e.title);
+      tt.appendChild(el('span','tx-tag',e.k==='job'?'Job':e.k==='dep'?'Deposit':'Manual'));l.appendChild(tt);if(e.sub)l.appendChild(el('small','',e.sub));
+      var a=el('div','tx-amt '+(e.dir==='IN'?'tx-in':e.dir==='OUT'?'tx-out':'tx-dep'),(e.dir==='OUT'?'− ':e.dir==='IN'?'+ ':'')+tk(e.amt));if(e.way)a.appendChild(el('small','',e.way));
+      top.appendChild(l);top.appendChild(a);r.appendChild(top);
+      var ac=el('div','acts');ac.hidden=true;
+      if(e.k==='job'){ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(e.b)}));ac.appendChild(btn('Edit bill','',function(){billSheet(e.b,true,loadAdmin)}))}
+      else if(e.k==='manual'){ac.appendChild(btn('Edit','',function(){smartEditTxn(e.t)}));ac.appendChild(btn('Delete','del',async function(){if(!confirm('এই entry মুছবেন?'))return;var x=await sb.from('acc_transactions').delete().eq('id',e.t.id);if(x.error)alert(x.error.message);else loadAdmin()}))}
+      else ac.appendChild(btn('Undo confirm','',function(){if(confirm('আবার pending করবেন?'))accSet(e.d.id,'pending')}));
+      r.appendChild(ac);top.onclick=function(){ac.hidden=!ac.hidden};list.appendChild(r);
+    });
+  }
+  q.oninput=function(){Q=q.value;draw()};
+  bar.appendChild(btn('⬇ CSV','',function(){csv(visible())}));
+  bar.appendChild(btn('💾 Save report','',async function(){
+    var v=visible(),t=totals(v),rep={report_type:'transaction',range:R,category:T,generated_at:new Date().toISOString(),money_in:t.i,money_out:t.o,net:t.n,entry_count:v.length};
+    var rr=await sb.from('report_snapshots').insert({report_type:'transaction',period:R,summary:rep,created_by:me&&me.id?me.id:null});
+    if(rr.error){alert('Report save হয়নি: '+rr.error.message);return}
+    try{var ep=(typeof HOMEFIX_DRIVE_WEBAPP_URL!=='undefined'?HOMEFIX_DRIVE_WEBAPP_URL:'');
+      if(ep){await fetch(ep,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'transaction-report',fileName:'HomeFix-Transaction-Report-'+today()+'.json',mimeType:'application/json',base64:btoa(unescape(encodeURIComponent(JSON.stringify({report:rep,entries:v},null,2))))})});alert('Report Supabase ও Google Drive-এ save হয়েছে।');return}}catch(e){}
+    alert('Report Supabase-এ save হয়েছে।');
+  }));
+  draw();
+};
+var ra2=window.renderAdmin;
+window.renderAdmin=function(){if(page!=='txn'){Q='';OPEN=false}return ra2.apply(this,arguments)};
+})();
+</script>
 </body>
 </html>
