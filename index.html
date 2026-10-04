@@ -2194,6 +2194,8 @@ body{font-family:Montserrat,'Hind Siliguri',system-ui,sans-serif!important}
 .anav button{font-size:10px!important}
 .chip,.mini-badge,.job-date,.job-items,.job-tech,.job-service,.tx-tag,.tile span,.who,.sb,.row-actions .sb,.bc p{font-size:11px!important}
 .sb,.row-actions .sb{font-size:12px!important}
+#dashOut{display:none!important}
+#adminBtn{color:#8ed7c8!important;font-weight:700}
 </style>
 <script id="homefix-fixes-js">
 (function(){
@@ -2214,6 +2216,54 @@ window.invoicePrint=function(b){
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>HomeFix-Invoice-'+E(b.code)+'</title><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:"Hind Siliguri",Arial,sans-serif;margin:28px;color:#12221f}.h{background:#0c2925;color:#fff;padding:16px;border-radius:8px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.r{text-align:right}.t{font-size:18px;font-weight:700}</style></head><body><div class="h"><b>HomeFix</b><span>INVOICE · '+E(b.code)+'</span></div><p><b>'+E(b.customer)+'</b><br>'+E(b.phone)+'<br>'+E(b.address)+'</p><p>Date: '+E(b.booking_date)+' · Technician: '+E(techName(b.tech_id))+' · Payment: '+E(b.pay_mode||'Cash')+'</p><table><tr><th>Service / Item</th><th class="r">Qty × Price</th><th class="r">Amount</th></tr>'+rows+'</table><p class="r">Subtotal: ৳ '+Math.round(base(b)).toLocaleString('en-US')+(+b.discount?'<br>Discount: − ৳ '+Math.round(+b.discount):'')+'</p><p class="r t">TOTAL: ৳ '+Math.round(bill(b)).toLocaleString('en-US')+'</p><p>Thank you for choosing HomeFix.</p></body></html>');
   w.document.close();setTimeout(function(){w.focus();w.print()},900);
 };
+/* ===== Admin section: profile, password, logout ===== */
+var AB=el('button','back','👤 Admin');AB.type='button';AB.id='adminBtn';
+$('dashTitle').parentNode.insertBefore(AB,$('dashTitle'));
+var admDone=false;
+AB.onclick=function(){page='admin';admDone=false;renderAdmin()};
+var _ra=window.renderAdmin;
+window.renderAdmin=function(){
+  if(page!=='admin'){admDone=false;return _ra.apply(this,arguments)}
+  if(admDone)return;admDone=true;
+  var T=$('tabs'),L=$('list');T.innerHTML='';L.innerHTML='';
+  document.querySelectorAll('.tiles,.completed-link,.smart-filter,.new-alert').forEach(function(x){x.remove()});
+  $('dashTitle').textContent='Admin';$('csv').style.display='none';renderNav();
+  var c=el('div','bc'),r=el('div','rw');
+  r.appendChild(el('b','',me.name||me.email));r.appendChild(el('span','chip ok','Admin'));c.appendChild(r);
+  c.appendChild(el('p','',me.email||''));L.appendChild(c);
+  function lab(t){var l=el('label','',t);l.style.marginTop='10px';return l}
+  var f=el('div','bc');f.appendChild(el('b','','Admin information'));
+  var nm=accField('input','Full name'),ph=accField('input','01XXXXXXXXX','tel'),m1=el('p','hint','');
+  nm.value=me.name||'';ph.value=me.phone||'';
+  [lab('Full name'),nm,lab('Phone'),ph,m1].forEach(function(x){f.appendChild(x)});
+  var a1=el('div','acts');
+  a1.appendChild(btn('Save information','pri',async function(){
+    var n=nm.value.trim(),p=ph.value.trim();
+    if(!n){m1.textContent='Name দিন।';return}
+    if(p&&!okPhone(p)){m1.textContent='Phone সঠিক নয় (01XXXXXXXXX)।';return}
+    var x=await sb.from('profiles').update({name:n,phone:p?normPhone(p):null}).eq('id',me.id);
+    if(x.error){m1.textContent='Save হয়নি: '+x.error.message;return}
+    me.name=n;me.phone=p?normPhone(p):null;$('dashWho').textContent='Logged in as '+n+' (admin)';m1.textContent='Saved ✓';
+  }));
+  f.appendChild(a1);L.appendChild(f);
+  var g=el('div','bc');g.appendChild(el('b','','Change password'));
+  var p1=accField('input','New password (min 8)','password'),p2=accField('input','Confirm new password','password'),m2=el('p','hint','');
+  p1.autocomplete=p2.autocomplete='new-password';
+  [p1,p2,m2].forEach(function(x){g.appendChild(x)});
+  var a2=el('div','acts');
+  a2.appendChild(btn('Update password','pri',async function(){
+    if(p1.value.length<8){m2.textContent='কমপক্ষে ৮ অক্ষর দিন।';return}
+    if(p1.value!==p2.value){m2.textContent='Password দুটো মিলছে না।';return}
+    var x=await sb.auth.updateUser({password:p1.value});
+    if(x.error){m2.textContent='Update হয়নি: '+x.error.message;return}
+    p1.value=p2.value='';m2.textContent='Password বদলানো হয়েছে ✓';
+  }));
+  g.appendChild(a2);L.appendChild(g);
+  var o=el('div','bc'),a3=el('div','acts');
+  a3.appendChild(btn('⎋ Log out','del',function(){if(confirm('Log out করবেন?'))logout()}));
+  o.appendChild(a3);L.appendChild(o);
+};
+
 })();
 </script>
 </body>
