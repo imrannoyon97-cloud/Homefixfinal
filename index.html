@@ -601,7 +601,7 @@ function addBooking(){
    '<div class="f"><label>Service</label><input class="svc" list="svcL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="svcL'+n+'"></datalist></div>'+
    '<div class="f"><label>Service price (optional)</label><div class="price"><span>৳</span><input class="price-in" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>'+
    '<div class="f ok"><label>Booking date</label><input class="date" type="date" min="'+today()+'" value="'+today()+'"></div>'+
-   '<div class="f ok"><label>Booking time</label><select class="time"><option value="09:00">সকাল ৯টা–১১টা</option><option value="11:00" selected>সকাল ১১টা–দুপুর ১টা</option><option value="14:00">দুপুর ২টা–বিকাল ৪টা</option><option value="16:00">বিকাল ৪টা–সন্ধ্যা ৬টা</option></select></div>';
+   '<div class="f ok"><label>Booking time</label><input class="time" type="time" value="" step="60" required></div>';
   $('bks').appendChild(c);
   var q=function(s){return c.querySelector(s)};
   function fSvc(){var m=pick(CAT,q('.cat').value)||{};fill($('svcL'+n),pick(m,q('.sub').value)||[])}
@@ -873,6 +873,7 @@ function card(b){
   c.appendChild(el('p','',b.address));
   c.appendChild(el('p','',[b.category,b.sub,b.service].filter(Boolean).join(' / ')));
   c.appendChild(el('p','',b.booking_date+', '+fmtTime(b.booking_time)));
+  if(b.tech_id)c.appendChild(el('p','hint','Technician visit: '+bnDate(b.technician_visit_date||b.booking_date)+', '+slotText(b.technician_visit_time||b.booking_time)));
   if(b.tech_id)c.appendChild(el('p','','Technician: '+techName(b.tech_id)));
   c.appendChild(el('p','bl','Bill ৳ '+bill(b)+(+b.discount?' (discount ৳ '+(+b.discount)+')':'')));
   return c;
@@ -881,7 +882,10 @@ function techSelect(b){
   var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Technician'));
   var o0=el('option','','Select technician');o0.value='';s.appendChild(o0);
   users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
-  w.appendChild(s);w._s=s;return w;
+  w.appendChild(s);w._s=s;
+  var dl=el('label','','Technician visit date');var di=dateInput(b.technician_visit_date||b.booking_date||today());w.appendChild(dl);w.appendChild(di);w._date=di;
+  var tl=el('label','','Technician visit time');var ti=slotSelect(b.technician_visit_time||b.booking_time);w.appendChild(tl);w.appendChild(ti);w._time=ti;
+  return w;
 }
 async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
 function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
@@ -1097,11 +1101,11 @@ function renderAdmin(){
     var c=card(b),ac=el('div','acts'),ts;
     if(b.status==='pending'){
       ts=techSelect(b);c.appendChild(ts);
-      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}assignFlow(b,ts._s.value)}));
+      ac.appendChild(btn('Confirm & assign','pri',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
       ac.appendChild(btn('Cancel','del',function(){upd(b.id,{status:'cancelled'})}));
     }else if(b.status==='confirmed'){
       ts=techSelect(b);c.appendChild(ts);
-      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value})}));
+      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value,technician_visit_date:ts._date.value,technician_visit_time:ts._time.value})}));
       ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,ts._s.value||b.tech_id)}));
       ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,ts._s.value||b.tech_id,'customer')}));
       ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
@@ -1135,18 +1139,19 @@ function renderTeam(L){
 }
 $('csv').addEventListener('click',function(){
   var q=function(v,p){var s=String(v==null?'':v).replace(/"/g,'""');if(p)s='="'+s+'"';else s='"'+s+'"';return s};
-  var out=['Code,Customer,Phone,Address,Category,Sub category,Service,Price,Discount,Bill,Date,Time,Technician,Status,Work status,Work items'];
-  bks.forEach(function(b){out.push([q(b.code),q(b.customer),q(b.phone,1),q(b.address),q(b.category),q(b.sub),q(b.service),base(b),+b.discount||0,bill(b),q(b.booking_date),q(b.booking_time),q(techName(b.tech_id)),q(b.status),q(WORK[b.work_status]),q(items(b).map(function(x){return x.n+' '+x.a}).join('; '))].join(','))});
+  var out=['Code,Customer,Phone,Address,Category,Sub category,Service,Price,Discount,Bill,Booking Date,Booking Time,Technician Visit Date,Technician Visit Time,Technician,Status,Work status,Work items'];
+  bks.forEach(function(b){out.push([q(b.code),q(b.customer),q(b.phone,1),q(b.address),q(b.category),q(b.sub),q(b.service),base(b),+b.discount||0,bill(b),q(b.booking_date),q(b.booking_time),q(b.technician_visit_date||b.booking_date),q(b.technician_visit_time||b.booking_time),q(techName(b.tech_id)),q(b.status),q(WORK[b.work_status]),q(items(b).map(function(x){return x.n+' '+x.a}).join('; '))].join(','))});
   var blob=new Blob(['\ufeff'+out.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='homefix-bookings.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},2000);
 });
 
 // ================= assign + send details (WhatsApp / SMS / imo) =================
 function intlPhone(v){var n=normPhone(v);return n.indexOf('0')===0?'88'+n:n}
-var SLOTS=[['09:00','সকাল ৯টা–১১টা'],['11:00','সকাল ১১টা–দুপুর ১টা'],['14:00','দুপুর ২টা–বিকাল ৪টা'],['16:00','বিকাল ৪টা–সন্ধ্যা ৬টা']];
+var SLOTS=[];
 function hm(v){return String(v||'').slice(0,5)}
-function slotText(v){var x=SLOTS.filter(function(k){return k[0]===hm(v)})[0];return x?x[1]:fmtTime(v)}
-function slotSelect(v){var s=document.createElement('select');SLOTS.forEach(function(x){var o=el('option','',x[1]);o.value=x[0];s.appendChild(o)});if(v&&!SLOTS.some(function(x){return x[0]===hm(v)})){var o=el('option','',fmtTime(v)+' (custom)');o.value=hm(v);s.appendChild(o)}s.value=hm(v)||'11:00';return s}
+function slotText(v){return hm(v)?fmtTime(hm(v)):''}
+function slotSelect(v){var s=document.createElement('input');s.type='time';s.step='60';s.value=hm(v)||'';s.required=true;return s}
+function dateInput(v){var i=document.createElement('input');i.type='date';i.min=today();i.value=v||today();return i}
 function vcode(b){var h=0,t=String(b.id||b.code);for(var i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;return String(1000+h%9000)}
 function bnDate(d){try{var x=new Date(d+'T00:00:00');return isNaN(x)?d:x.toLocaleDateString('bn-BD',{day:'numeric',month:'long',year:'numeric'})}catch(e){return d}}
 function mapLink(a){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a||'')}
@@ -1156,7 +1161,7 @@ function markSent(id,k){SENT[id+':'+k]=1;try{localStorage.setItem('hf_sent',JSON
 function jobMsg(b,t,d,tm,who,ex,kind){
   var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
   var its=(b.items&&b.items.length)?b.items.map(function(x){return '• '+x.n+' — ৳ '+(+x.a||0)}).join('\n'):'';
-  var tn=t?(t.name||t.email):'—',tid=(t&&t.tech_code)||'—',tp=(t&&t.phone)||'—',code=vcode(b),when=bnDate(d)+', '+slotText(tm),L;
+  var tn=t?(t.name||t.email):'—',tid=(t&&t.tech_code)||'—',tp=(t&&t.phone)||'—',code=vcode(b),when=bnDate(b.technician_visit_date||d)+', '+slotText(b.technician_visit_time||tm),L;
   if(who==='tech'){
     L=['HomeFix — নতুন কাজ','','Booking ID: '+b.code,'Service: '+svc];if(its)L.push(its);
     L.push('কখন যাবে: '+when);if(ex)L.push('আনুমানিক পৌঁছানো: '+ex);
@@ -1189,8 +1194,8 @@ function sendSheet(b,techId,toWho,kind0){
   [['confirm','Booking confirm'],['ontheway','On the way'],['done','Completed + review']].forEach(function(x){var o=el('option','',x[1]);o.value=x[0];ks.appendChild(o)});
   ks.value=kind0||(b.work_status==='complete'?'done':b.work_status==='on_the_way'?'ontheway':'confirm');
   var lb=el('label','','কখন যাবে');lb.style.cssText='display:block;margin-top:10px';
-  var dt=accField('input','Date','date');dt.value=b.booking_date||today();
-  var tm=slotSelect(b.booking_time);tm.style.marginTop='8px';
+  var dt=accField('input','Technician visit date','date');dt.min=today();dt.value=b.technician_visit_date||b.booking_date||today();
+  var tm=slotSelect(b.technician_visit_time||b.booking_time);tm.style.marginTop='8px';
   var ex=document.createElement('select');ex.style.marginTop='8px';
   [['','Expected arrival (optional)'],['ঠিক সময়ে','ঠিক সময়ে'],['সময়ের ৩০ মিনিটের মধ্যে','৩০ মিনিটের মধ্যে'],['সময়ের ১ ঘণ্টার মধ্যে','১ ঘণ্টার মধ্যে'],['যাওয়ার আগে call করবেন','যাওয়ার আগে call করবেন']].forEach(function(x){var o=el('option','',x[1]);o.value=x[0];ex.appendChild(o)});
   var ta=document.createElement('textarea');ta.rows=10;ta.style.cssText='width:100%;margin-top:8px;font:inherit';
@@ -1207,7 +1212,7 @@ function sendSheet(b,techId,toWho,kind0){
   [dt,tm,ex,ks].forEach(function(x){x.onchange=refresh});refresh();
   [ks,lb,dt,tm,ex,ta,note].forEach(function(x){f.appendChild(x)});
   var ac=el('div','acts');
-  async function saveTime(){if(!admin)return;if(dt.value!==b.booking_date||hm(tm.value)!==hm(b.booking_time)){var r=await sb.from('bookings').update({booking_date:dt.value,booking_time:tm.value}).eq('id',b.id);if(!r.error){b.booking_date=dt.value;b.booking_time=tm.value}}}
+  async function saveTime(){if(!admin)return;if(dt.value!==(b.technician_visit_date||b.booking_date)||hm(tm.value)!==hm(b.technician_visit_time||b.booking_time)){var r=await sb.from('bookings').update({technician_visit_date:dt.value,technician_visit_time:tm.value}).eq('id',b.id);if(!r.error){b.technician_visit_date=dt.value;b.technician_visit_time=tm.value}}}
   function need(){if(!phone()){alert('Phone number নেই');return false}var h=+hm(tm.value).slice(0,2);if((h<7||h>22)&&!confirm('সময় রাত/ভোর ('+fmtTime(tm.value)+')। তবু পাঠাবেন?'))return false;return true}
   async function go(fn){if(!need())return;await saveTime();markSent(b.id,who);fn();refresh()}
   ac.appendChild(btn('WhatsApp','pri',function(){go(function(){window.open('https://wa.me/'+intlPhone(phone())+'?text='+encodeURIComponent(ta.value),'_blank')})}));
@@ -1219,11 +1224,14 @@ function sendSheet(b,techId,toWho,kind0){
   ac.appendChild(btn('Close','',close));
   f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)close()};document.body.appendChild(sh);
 }
-async function assignFlow(b,techId){
+async function assignFlow(b,techId,visitDate,visitTime){
   if(!techId){$('dashNote').textContent='Select a technician first.';return}
-  var r=await sb.from('bookings').update({status:'confirmed',tech_id:techId}).eq('id',b.id);
+  if(!visitDate||!visitTime){$('dashNote').textContent='Technician visit date and time select করুন।';return}
+  if(b.booking_date&&visitDate<b.booking_date){$('dashNote').textContent='Technician visit date booking date-এর আগে হতে পারবে না।';return}
+  if(b.booking_date&&visitDate===b.booking_date&&b.booking_time&&hm(visitTime)<hm(b.booking_time)){$('dashNote').textContent='একই দিনে technician visit time booking time-এর আগে হতে পারবে না।';return}
+  var r=await sb.from('bookings').update({status:'confirmed',tech_id:techId,technician_visit_date:visitDate,technician_visit_time:visitTime}).eq('id',b.id);
   if(r.error){$('dashNote').textContent='Could not save: '+r.error.message;return}
-  b.status='confirmed';b.tech_id=techId;sendSheet(b,techId);
+  b.status='confirmed';b.tech_id=techId;b.technician_visit_date=visitDate;b.technician_visit_time=visitTime;sendSheet(b,techId);
 }
 
 // ================= technician =================
@@ -1240,7 +1248,7 @@ function renderTech(){
   var rows=tJobs.slice().sort(function(a,b){var ad=a.work_status==='complete',bd=b.work_status==='complete';return (ad-bd)||String(a.booking_date+a.booking_time).localeCompare(String(b.booking_date+b.booking_time))});
   if(!rows.length)L.appendChild(el('p','hint','No jobs assigned yet.'));
   rows.forEach(function(b){
-    var c=card(b),w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
+    var c=card(b);c.appendChild(el('p','hint','Technician visit: '+bnDate(b.technician_visit_date||b.booking_date)+' · '+slotText(b.technician_visit_time||b.booking_time)));var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
     Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
     s.onchange=async function(){
       var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
@@ -1542,8 +1550,13 @@ body::before{
       if(smartTxnFilter!=='all'&&txnType(t)!==smartTxnFilter)return false;
       if(smartTxnSearch){
         var q=smartTxnSearch.toLowerCase();
-        return [t.transaction_id,t.booking_id,t.customer,t.technician_name,t.part_name,t.title,t.note,t.payment_way]
-          .map(esc).join(' ').toLowerCase().indexOf(q)>-1;
+        var direct=[t.transaction_id,t.booking_id,t.customer,t.technician_name,t.part_name,t.title,t.note,t.payment_way].map(esc).join(' ').toLowerCase();
+        if(direct.indexOf(q)>-1)return true;
+        return bks.some(function(b){
+          var same=String(t.booking_id||'')===String(b.id||'')||String(t.booking_id||'')===String(b.code||'');
+          var vals=[b.code,b.customer,b.phone,b.id].map(esc).join(' ').toLowerCase();
+          return (same||vals.indexOf(q)>-1) && (same || vals.indexOf(q)>-1);
+        });
       }
       return true;
     });
@@ -1571,7 +1584,7 @@ body::before{
     });
     L.appendChild(periods);
 
-    var search=document.createElement('input');search.className='smart-search';search.type='search';search.autocomplete='off';search.name='hf-txn-q';search.placeholder='🔎 Search ID, booking, customer, parts...';search.value=smartTxnSearch;
+    var search=document.createElement('input');search.className='smart-search';search.type='search';search.autocomplete='off';search.name='hf-txn-q';search.placeholder='🔎 Search Booking ID / Phone / Customer name...';search.value=smartTxnSearch;
     search.oninput=function(){smartTxnSearch=this.value;drawRows()};L.appendChild(search);
 
     var filters=document.createElement('div');filters.className='smart-filter';
@@ -1683,16 +1696,18 @@ body::before{
     [['customer','Customer',b.customer],['phone','Phone',b.phone],['address','Address',b.address],['category','Category',b.category],['sub','Sub category',b.sub],['service','Service',b.service],['booking_date','Date',b.booking_date],['booking_time','Time',b.booking_time]];
     fields.price=accField('input','Price','number');fields.price.value=b.price||0;
     fields.discount=accField('input','Discount','number');fields.discount.value=b.discount||0;
-    fields.date=accField('input','Date','date');fields.date.value=b.booking_date||today();
-    fields.time=slotSelect(b.booking_time||'11:00');fields.time.style.marginTop='8px';
+    fields.date=accField('input','Booking date','date');fields.date.min=today();fields.date.value=b.booking_date||today();
+    fields.time=slotSelect(b.booking_time);fields.time.style.marginTop='8px';
+    fields.visitDate=accField('input','Technician visit date','date');fields.visitDate.min=today();fields.visitDate.value=b.technician_visit_date||b.booking_date||today();
+    fields.visitTime=slotSelect(b.technician_visit_time||b.booking_time);fields.visitTime.style.marginTop='8px';
     var inputs={};
     [['customer','Customer'],['phone','Phone'],['address','Address'],['category','Category'],['sub','Sub category'],['service','Service']].forEach(function(x){
       var i=accField('input',x[1]);i.value=b[x[0]]||'';inputs[x[0]]=i;f.appendChild(i);
     });
-    f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.price);f.appendChild(fields.discount);
+    f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.visitDate);f.appendChild(fields.visitTime);f.appendChild(fields.price);f.appendChild(fields.discount);
     var ac=el('div','acts');
     ac.appendChild(btn('Save','pri',async function(){
-      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,price:+fields.price.value||0,discount:+fields.discount.value||0};
+      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0};
       var r=await sb.from('bookings').update(d).eq('id',b.id);
       if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
     }));
@@ -1908,6 +1923,7 @@ function card(r){
   h.appendChild(el('span','chip'+(stage(r)===4?' ok':''),r.status==='cancelled'?'Cancelled':STEPS[stage(r)]));card.appendChild(h);
   card.appendChild(el('p','',[r.category,r.sub,r.service].filter(Boolean).join(' / ')));
   card.appendChild(el('p','',bnDate(r.booking_date)+', '+slotText(r.booking_time)));
+  if(r.tech_name||r.technician_visit_date||r.technician_visit_time){card.appendChild(el('p','hint','Technician visit: '+bnDate(r.technician_visit_date||r.booking_date)+' · '+slotText(r.technician_visit_time||r.booking_time)))}
   if(r.status!=='cancelled'){var st=stage(r);STEPS.forEach(function(n,i){card.appendChild(el('p','',(i<=st?'✅ ':'⬜ ')+n))})}
   if(r.tech_name){
     var tb=el('div','');tb.style.cssText='display:flex;gap:12px;align-items:center;margin-top:12px';
@@ -1925,7 +1941,7 @@ async function go(){
   if(!okPhone(p)){m.textContent='সঠিক phone number দিন (01XXXXXXXXX)।';return}
   if(!sb){m.textContent='App database-এর সাথে connected নয়।';return}
   var x=await sb.rpc('track_by_phone',{p_phone:p});
-  if(x.error){m.textContent='Track করা যায়নি: '+(x.error.message||'Database function is not available. Run the HomeFix backend SQL.');return}
+  if(x.error){m.textContent='Track করা যায়নি: '+x.error.message;return}
   var rows=x.data||[];if(!rows.length){m.textContent='এই নম্বরে কোনো booking পাওয়া যায়নি।';return}
   rows.forEach(function(r){o.appendChild(card(r))});
 }
@@ -2012,7 +2028,20 @@ function entries(){
 }
 function visible(){var q=Q.trim().toLowerCase();return entries().filter(function(e){
   if(!inR(e.date))return false;if(T!=='all'&&e.type!==T)return false;
-  return !q||(e.title+' '+e.sub+' '+e.way+' '+e.type).toLowerCase().indexOf(q)>-1})}
+  if(!q)return true;
+  var hay=[e.title,e.sub,e.way,e.type].join(' ').toLowerCase();
+  if(hay.indexOf(q)>-1)return true;
+  if(e.k==='job'&&e.b){
+    var b=e.b;
+    var bookingHay=[b.code,b.phone,b.customer,b.id].map(function(v){return String(v==null?'':v).toLowerCase()}).join(' ');
+    if(bookingHay.indexOf(q)>-1)return true;
+  }
+  if(e.k==='manual'&&e.t&&e.t.booking_id){
+    var linked=bks.filter(function(b){return String(b.id)===String(e.t.booking_id)||String(b.code)===String(e.t.booking_id)})[0];
+    if(linked){var linkedHay=[linked.code,linked.phone,linked.customer,linked.id].map(function(v){return String(v==null?'':v).toLowerCase()}).join(' ');if(linkedHay.indexOf(q)>-1)return true}
+  }
+  return false;
+})}
 function totals(v){var i=0,o=0,d=0;v.forEach(function(e){if(e.dir==='IN')i+=e.amt;else if(e.dir==='OUT')o+=e.amt;else d+=e.amt});return{i:i,o:o,n:i-o,d:d}}
 function dues(){return users.filter(function(u){return u.role==='technician'}).reduce(function(t,u){
   var v=accBal(accDone(bks).filter(function(j){return j.tech_id===u.id}),accDeps.filter(function(d){return d.technician_id===u.id}));return t+(v>0?v:0)},0)}
@@ -2061,7 +2090,7 @@ window.renderTransactions=function(L){
   L.appendChild(sum);var info=el('p','hint','');L.appendChild(info);
   L.appendChild(chips([['today','Today'],['week','7 days'],['month','This month'],['all','All']],R,function(v){R=v}));
   L.appendChild(chips([['all','All'],['Service','🛠 Service'],['Parts','🔩 Parts'],['Other','📦 Other'],['Deposit','🏦 Deposit']],T,function(v){T=v}));
-  var q=document.createElement('input');q.type='search';q.name='hf-tx-q';q.autocomplete='off';q.className='smart-search';q.placeholder='🔎 Booking, customer, technician…';q.value=Q;L.appendChild(q);
+  var q=document.createElement('input');q.type='search';q.name='hf-tx-q';q.autocomplete='off';q.className='smart-search';q.placeholder='🔎 Booking ID / Phone / Customer name…';q.value=Q;L.appendChild(q);
   addPanel(L);
   var list=el('div','');L.appendChild(list);
   var bar=el('div','acts');L.appendChild(bar);
@@ -2090,7 +2119,7 @@ window.renderTransactions=function(L){
   bar.appendChild(btn('💾 Save report','',async function(){
     var v=visible(),t=totals(v),rep={report_type:'transaction',range:R,category:T,generated_at:new Date().toISOString(),money_in:t.i,money_out:t.o,net:t.n,entry_count:v.length};
     var rr=await sb.from('report_snapshots').insert({report_type:'transaction',period:R,summary:rep,created_by:me&&me.id?me.id:null});
-    if(rr.error){alert('Report save হয়নি: '+(rr.error.message||'report_snapshots table is not available. Run the HomeFix backend SQL.'));return}
+    if(rr.error){alert('Report save হয়নি: '+rr.error.message);return}
     try{var ep=(typeof HOMEFIX_DRIVE_WEBAPP_URL!=='undefined'?HOMEFIX_DRIVE_WEBAPP_URL:'');
       if(ep){await fetch(ep,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'transaction-report',fileName:'HomeFix-Transaction-Report-'+today()+'.json',mimeType:'application/json',base64:btoa(unescape(encodeURIComponent(JSON.stringify({report:rep,entries:v},null,2))))})});alert('Report Supabase ও Google Drive-এ save হয়েছে।');return}}catch(e){}
     alert('Report Supabase-এ save হয়েছে।');
