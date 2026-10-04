@@ -882,13 +882,13 @@ function card(b){
 function techSelect(b){
   var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Technician'));
   var o0=el('option','','Select technician');o0.value='';s.appendChild(o0);
-  users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
+  users.filter(function(u){var r=String(u.role||'').trim().toLowerCase();return r==='technician'||r==='tech'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
   w.appendChild(s);w._s=s;
   var dl=el('label','','Technician visit date');var di=dateInput(b.technician_visit_date||b.booking_date||today());w.appendChild(dl);w.appendChild(di);w._date=di;
   var tl=el('label','','Technician visit time');var ti=document.createElement('input');ti.type='time';ti.step='60';ti.value=hm(b.technician_visit_time||b.booking_time)||'11:00';w.appendChild(tl);w.appendChild(ti);w._time=ti;
   return w;
 }
-async function upd(id,d){d=Object.assign({},d,{last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null});if(d.work_status==='complete'){d.completed_at=new Date().toISOString();d.completed_by=(me&&me.id)||null}var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
+async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
 function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
 function renderNav(){
   document.querySelectorAll('#anav [data-p]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.p===page)});
@@ -988,8 +988,6 @@ function renderCompletedJobs(L){
     left.appendChild(el('div','job-items',it||'No work items'));
     var right=el('div','job-right');
     right.appendChild(el('b','job-amount',tk(bill(b))));
-    if(b.completed_at)left.appendChild(el('div','job-items','Completed: '+new Date(b.completed_at).toLocaleString('en-GB')));
-    if(b.last_edited_at)left.appendChild(el('div','job-items','Last edit: '+new Date(b.last_edited_at).toLocaleString('en-GB')+' · ID: '+(b.last_edited_by||'—')));
     right.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer','done')}));
     right.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));
     var ac=el('div','row-actions');
@@ -1233,26 +1231,13 @@ async function assignFlow(b,techId,visitDate,visitTime){
   if(b.booking_date&&visitDate<b.booking_date){$('dashNote').textContent='Technician visit date booking date-এর আগে হতে পারবে না।';return false}
   if(b.booking_date&&visitDate===b.booking_date&&b.booking_time&&hm(visitTime)<hm(b.booking_time)){$('dashNote').textContent='একই দিনে technician visit time booking time-এর আগে হতে পারবে না।';return false}
   $('dashNote').textContent='Saving technician schedule…';
-  if(!sb){$('dashNote').textContent='Database connection নেই.';return false}
-
-  // IMPORTANT: use the secure Supabase RPC instead of direct table UPDATE.
-  // This bypasses strict bookings UPDATE RLS while still checking admin role in SQL.
-  var r=await sb.rpc('admin_assign_booking',{
-    p_booking_id:b.id,
-    p_tech_id:techId,
-    p_visit_date:visitDate,
-    p_visit_time:visitTime
-  });
+  var r=await sb.rpc('admin_assign_booking',{p_booking_id:b.id,p_tech_id:techId,p_visit_date:visitDate,p_visit_time:visitTime});
   if(r.error){
-    $('dashNote').textContent='Could not save technician schedule: '+r.error.message;
-    console.error('admin_assign_booking:',r.error);
-    return false;
+    // Fallback for projects where the RPC has not reached PostgREST yet.
+    var f=await sb.from('bookings').update({status:'confirmed',tech_id:techId,technician_visit_date:visitDate,technician_visit_time:visitTime}).eq('id',b.id);
+    if(f.error){$('dashNote').textContent='Could not save technician schedule: '+(f.error.message||r.error.message);return false}
   }
-  var saved=r.data||{};
-  b.status='confirmed';
-  b.tech_id=techId;
-  b.technician_visit_date=saved.technician_visit_date||visitDate;
-  b.technician_visit_time=saved.technician_visit_time||visitTime;
+  b.status='confirmed';b.tech_id=techId;b.technician_visit_date=visitDate;b.technician_visit_time=visitTime;
   $('dashNote').textContent='Technician date & time saved successfully.';
   sendSheet(b,techId);
   await loadAdmin();
@@ -1275,31 +1260,18 @@ function renderTech(){
   rows.forEach(function(b){
     var c=card(b);c.appendChild(el('p','hint','Technician visit: '+bnDate(b.technician_visit_date||b.booking_date)+' · '+slotText(b.technician_visit_time||b.booking_time)));var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
     Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
-    var previousStatus=b.work_status||'not_yet';
     s.onchange=async function(){
       if(b.work_status==='complete'){s.value='complete';$('tNote').textContent='Complete কাজ আর edit করা যাবে না।';return}
-      if(s.value==='complete' && !(b.items&&b.items.length)){
-        s.value=previousStatus;
-        var nb=tJobs.filter(function(x){return x.id===b.id})[0];
-        if(nb)billSheet(nb,false,async function(){
-          var rr=await sb.from('bookings').update({work_status:'complete',completed_at:new Date().toISOString(),completed_by:(me&&me.id)||null,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null}).eq('id',b.id);
-          if(rr.error){$('tNote').textContent='Could not complete work: '+rr.error.message;return}
-          await loadTech();
-        });
-        return;
-      }
       var patch={work_status:s.value,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
-      if(s.value==='complete'){patch.completed_at=new Date().toISOString();patch.completed_by=(me&&me.id)||null}
+      if(s.value==='complete'){patch.completed_at=new Date().toISOString();patch.completed_by=(me&&me.id)||null;patch.bill_locked_at=new Date().toISOString()}
       var r=await sb.from('bookings').update(patch).eq('id',b.id);
-      if(r.error){$('tNote').textContent='Could not update status: '+r.error.message;s.value=previousStatus;return}
-      previousStatus=s.value;
+      if(r.error){$('tNote').textContent='Could not update status: '+r.error.message;return}
       await loadTech();
       if(s.value==='on_the_way'){var ob=tJobs.filter(function(x){return x.id===b.id})[0];if(ob)sendSheet(ob,me.id,'customer','ontheway')}
     };
     w.appendChild(s);c.appendChild(w);
     var ac=el('div','acts');
-    if(b.work_status!=='complete')ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
-    else ac.appendChild(btn('Bill locked','',function(){alert('কাজ Complete হয়েছে। Technician bill আর edit করতে পারবেন না।')}));
+    if(b.work_status!=='complete') ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
     ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,me.id,'customer')}));
     ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
     c.appendChild(ac);L.appendChild(c);
@@ -1747,7 +1719,7 @@ body::before{
     f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.visitDate);f.appendChild(fields.visitTime);f.appendChild(fields.price);f.appendChild(fields.discount);
     var ac=el('div','acts');
     ac.appendChild(btn('Save','pri',async function(){
-      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0};
       var r=await sb.from('bookings').update(d).eq('id',b.id);
       if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
     }));
@@ -1811,11 +1783,17 @@ body::before{
       top.appendChild(el('small','',b.booking_date||'—'));c.appendChild(top);
       c.appendChild(el('div','meta','👨‍🔧 '+techName(b.tech_id)+' · 🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')+' · 💰 '+tk(bill(b))));
       c.appendChild(el('div','meta','Status: '+(b.work_status||b.status||'—')+' · '+(b.booking_time||'')));
+      if(b.work_status==='complete'){
+        if(b.completed_at)c.appendChild(el('div','meta','Completed: '+new Date(b.completed_at).toLocaleString()));
+        if(b.completed_by)c.appendChild(el('div','meta','Completed by ID: '+b.completed_by));
+        if(b.last_edited_at)c.appendChild(el('div','meta','Last edit: '+new Date(b.last_edited_at).toLocaleString()));
+        if(b.last_edited_by)c.appendChild(el('div','meta','Last edit by ID: '+b.last_edited_by));
+      }
       var ac=el('div','smart-actions');
       ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));
       if(b.status==='pending'){
         var ts=techSelect(b);c.appendChild(ts);
-        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}assignFlow(b,ts._s.value)}));
+        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){$('dashNote').textContent='Select a technician first.';return}assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
         ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
       }else if(b.status==='confirmed'){
         ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
