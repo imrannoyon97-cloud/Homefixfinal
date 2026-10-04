@@ -1325,7 +1325,7 @@ function renderTech(){
 var accDeps=[],accExps=[],accRange='month';
 function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
 function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
-function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
+function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'&&b.tech_id})}
 function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
 function accColl(b){var m=lc(b.pay_mode);return (!m||m==='cash')?bill(b):0}
 function accBal(jobs,deps){
@@ -2706,6 +2706,140 @@ window.renderAdmin=function(){
 .chip.s-green{background:#2fb36d!important;color:#04210f!important}
 .meta.s-txt{font-weight:700}
 .meta.s-red{color:#ff7a7f!important}.meta.s-blue{color:#79adff!important}.meta.s-yellow{color:#ffcf4d!important}.meta.s-green{color:#5fd7a8!important}
+</style>
+
+<script id="homefix-v4-patch">
+(function(){
+var ST={not_yet:'Not yet',on_the_way:'On the way',working:'Working',complete:'Complete'},ORD=['not_yet','on_the_way','working','complete'];
+function fmtT(i){if(!i)return '';var d=new Date(i);return isNaN(d)?'':d.toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})}
+function stTimes(b){var s=b.status_times;if(typeof s==='string'){try{s=JSON.parse(s)}catch(e){s=null}}s=Object.assign({},s||{});if(!s.complete&&b.work_status==='complete'&&b.completed_at)s.complete=b.completed_at;return s}
+function stTime(b){var w=b.work_status||'not_yet',t=stTimes(b)[w];return t||(w!=='not_yet'?b.last_edited_at:'')||''}
+function trail(b){var s=stTimes(b);return ORD.filter(function(k){return s[k]}).map(function(k){return ST[k]+' '+fmtT(s[k])}).join(' → ')}
+function stLine(b){var t=fmtT(stTime(b));return '● '+ST[b.work_status||'not_yet']+(t?' · '+t:'')}
+
+/* 1) status change হলে সময় save */
+var _sws=window.setWorkStatus;
+window.setWorkStatus=async function(b,ns,done,src){
+  var wrapped=async function(){
+    try{var s=stTimes(b);s[ns]=new Date().toISOString();var r=await sb.from('bookings').update({status_times:s}).eq('id',b.id);if(!r.error)b.status_times=s}catch(e){}
+    if(typeof done==='function')await done();
+  };
+  return _sws.call(this,b,ns,wrapped,src);
+};
+
+/* 2) admin card: status এর পাশে সময় */
+var _ra=window.renderAdmin;
+window.renderAdmin=function(){
+  var r=_ra.apply(this,arguments);
+  try{document.querySelectorAll('.smart-work').forEach(function(n){
+    var t=n.querySelector('.top b'),code=t?String(t.textContent).split(' · ')[0]:'';
+    var b=bks.filter(function(x){return x.code===code})[0];if(!b||b.status!=='confirmed')return;
+    n.querySelectorAll('.meta').forEach(function(m){if(/^● /.test(m.textContent)){
+      m.textContent=stLine(b);var tr=trail(b);
+      if(tr&&!n.querySelector('.st-trail'))m.after(el('div','meta st-trail',tr));
+    }})
+  })}catch(e){}
+  return r;
+};
+
+/* 3) visit time locked — admin "Update" চাপলে তবেই বদলাবে */
+var _ts=window.techSelect;
+window.techSelect=function(b){
+  var w=_ts(b);if(!b.technician_visit_time)return w;
+  var di=w._date,ti=w._time,on=false;di.disabled=ti.disabled=true;
+  var bt=btn('✏️ Update visit time','',async function(){
+    if(!on){on=true;di.disabled=ti.disabled=false;bt.textContent='💾 Save visit time';return}
+    if(!di.value||!ti.value){alert('Date ও time দিন');return}
+    var r=await sb.from('bookings').update({technician_visit_date:di.value,technician_visit_time:ti.value}).eq('id',b.id);
+    if(r.error){alert('Save হয়নি: '+r.error.message);return}
+    b.technician_visit_date=di.value;b.technician_visit_time=ti.value;on=false;di.disabled=ti.disabled=true;bt.textContent='✏️ Update visit time';
+  });
+  w.appendChild(bt);return w;
+};
+
+/* 4) technician: Dashboard · Work Status · Profile */
+var tTab='dash',nav=document.createElement('nav');nav.className='anav';nav.id='tnav';nav.hidden=true;
+nav.innerHTML='<div>'
++'<button type="button" data-t="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</button>'
++'<button type="button" data-t="work"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Work Status</button>'
++'<button type="button" data-t="prof"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button></div>';
+document.body.appendChild(nav);
+nav.onclick=function(e){var x=e.target.closest('button');if(x){tTab=x.dataset.t;window.scrollTo(0,0);renderTech()}};
+var _show=window.show;
+window.show=function(v){_show.apply(this,arguments);var on=v==='tjobs';nav.hidden=!on;if(on)document.body.classList.add('hasnav')};
+
+function tDash(L){
+  var cnt=function(s){return tJobs.filter(function(b){return (b.work_status||'not_yet')===s}).length};
+  var tiles=el('div','tiles');
+  [['Assigned',tJobs.filter(function(b){return b.work_status!=='complete'}).length],['On the way',cnt('on_the_way')],['Working',cnt('working')],['Completed',cnt('complete')]].forEach(function(t){
+    var x=el('button','tile');x.type='button';x.appendChild(el('b','',String(t[1])));x.appendChild(el('span','',t[0]));x.onclick=function(){tTab='work';renderTech()};tiles.appendChild(x)});
+  L.appendChild(tiles);
+  var tmp=el('div');renderTechAcc(tmp);
+  Array.from(tmp.querySelectorAll('h2')).forEach(function(h){if(h.textContent==='My jobs')h.remove();else if(h.textContent==='My income')h.textContent='Cash summary'});
+  while(tmp.firstChild)L.appendChild(tmp.firstChild);
+}
+function tWork(L){
+  var rows=tJobs.slice().sort(function(a,b){var ad=a.work_status==='complete',bd=b.work_status==='complete';return (ad-bd)||String(a.booking_date+a.booking_time).localeCompare(String(b.booking_date+b.booking_time))});
+  if(!rows.length)L.appendChild(el('p','hint','No jobs assigned yet.'));
+  rows.forEach(function(b){
+    var c=card(b);
+    c.appendChild(el('p','hint','Technician visit: '+bnDate(b.technician_visit_date||b.booking_date)+' · '+slotText(b.technician_visit_time||b.booking_time)));
+    c.appendChild(el('p','hint',stLine(b)));var tr=trail(b);if(tr)c.appendChild(el('p','hint',tr));
+    var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
+    Object.keys(ST).forEach(function(k){var o=el('option','',ST[k]);o.value=k;if(k===(b.work_status||'not_yet'))o.selected=true;s.appendChild(o)});
+    var prev=b.work_status||'not_yet';
+    s.onchange=async function(){
+      if(b.work_status==='complete'){s.value='complete';$('tNote').textContent='Complete কাজ আর edit করা যাবে না।';return}
+      var next=s.value;s.value=prev;
+      var ok=await setWorkStatus(b,next,loadTech,'tech');if(!ok)return;prev=next;
+      if(next==='on_the_way'){var ob=tJobs.filter(function(x){return x.id===b.id})[0];if(ob)sendSheet(ob,me.id,'customer','ontheway')}
+    };
+    w.appendChild(s);c.appendChild(w);
+    var ac=el('div','acts');
+    if(b.work_status!=='complete')ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
+    else ac.appendChild(btn('Bill locked','',function(){alert('কাজ Complete হয়েছে। Technician bill আর edit করতে পারবেন না।')}));
+    ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,me.id,'customer')}));
+    ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
+    c.appendChild(ac);L.appendChild(c);
+  });
+}
+function tProf(L){
+  function lab(t){var l=el('label','',t);l.style.marginTop='10px';return l}
+  var f=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',(me.tech_code?me.tech_code+' · ':'')+(me.name||me.email)));r.appendChild(el('span','chip ok','Technician'));f.appendChild(r);
+  f.appendChild(el('p','',me.email||''));
+  var nm=accField('input','Full name'),ph=accField('input','01XXXXXXXXX','tel'),m1=el('p','hint','');nm.value=me.name||'';ph.value=me.phone||'';
+  [lab('Full name'),nm,lab('Phone'),ph,m1].forEach(function(x){f.appendChild(x)});
+  var a1=el('div','acts');a1.appendChild(btn('Save information','pri',async function(){
+    var n=nm.value.trim(),p=ph.value.trim();if(!n){m1.textContent='Name দিন।';return}
+    if(p&&!okPhone(p)){m1.textContent='Phone সঠিক নয় (01XXXXXXXXX)।';return}
+    var x=await sb.from('profiles').update({name:n,phone:p?normPhone(p):null}).eq('id',me.id);
+    if(x.error){m1.textContent='Save হয়নি: '+x.error.message;return}
+    me.name=n;me.phone=p?normPhone(p):null;$('techWho').textContent='Logged in as '+(me.tech_code?me.tech_code+' · ':'')+n;m1.textContent='Saved ✓';
+  }));f.appendChild(a1);L.appendChild(f);
+  var g=el('div','bc');g.appendChild(el('b','','Change password'));
+  var p1=accField('input','New password (min 8)','password'),p2=accField('input','Confirm new password','password'),m2=el('p','hint','');p1.autocomplete=p2.autocomplete='new-password';
+  [p1,p2,m2].forEach(function(x){g.appendChild(x)});
+  var a2=el('div','acts');a2.appendChild(btn('Update password','pri',async function(){
+    if(p1.value.length<8){m2.textContent='কমপক্ষে ৮ অক্ষর দিন।';return}
+    if(p1.value!==p2.value){m2.textContent='Password দুটো মিলছে না।';return}
+    var x=await sb.auth.updateUser({password:p1.value});if(x.error){m2.textContent='Update হয়নি: '+x.error.message;return}
+    p1.value=p2.value='';m2.textContent='Password বদলানো হয়েছে ✓';
+  }));g.appendChild(a2);L.appendChild(g);
+  var o=el('div','bc'),a3=el('div','acts');a3.appendChild(btn('⎋ Log out','del',function(){if(confirm('Log out করবেন?'))logout()}));o.appendChild(a3);L.appendChild(o);
+}
+window.renderTech=function(){
+  var L=$('tlist');L.innerHTML='';
+  nav.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.t===tTab)});
+  var h=document.querySelector('#v-tjobs h1');if(h)h.textContent={dash:'Dashboard',work:'Work Status',prof:'Profile'}[tTab];
+  (tTab==='dash'?tDash:tTab==='work'?tWork:tProf)(L);
+};
+})();
+</script>
+<style>
+#tnav div{grid-template-columns:repeat(3,1fr)!important}
+#techOut{display:none!important}
+.st-trail{font-size:10px!important;opacity:.85}
+input:disabled{opacity:.75}
 </style>
 
 </body>
