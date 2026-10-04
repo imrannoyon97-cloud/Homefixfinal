@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b5fff">
+<meta name="theme-color" content="#0b2723">
 <script>
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
@@ -577,7 +577,7 @@ try{if(window.supabase&&typeof SUPABASE_URL!=='undefined'&&SUPABASE_URL.indexOf(
 if(!sb)$('setupMsg').textContent='Setup needed: add your Supabase URL and anon key in config.js.';
 
 function items(b){return (b.items&&b.items.length)?b.items:[{n:b.service,a:+b.price||0}]}
-function base(b){return items(b).reduce(function(t,x){return t+(+x.a||0)},0)}
+function base(b){return items(b).reduce(function(t,x){return t+(+x.a||0)*(+x.qty||1)},0)}
 function bill(b){return Math.max(0,base(b)-(+b.discount||0))}
 
 // ================= catalog + booking form =================
@@ -599,7 +599,7 @@ function addBooking(){
    '<div class="f"><label>Category</label><input class="cat" list="catList" placeholder="Select or type" autocomplete="off"></div>'+
    '<div class="f"><label>Sub category</label><input class="sub" list="subL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="subL'+n+'"></datalist></div>'+
    '<div class="f"><label>Service</label><input class="svc" list="svcL'+n+'" placeholder="Select or type" autocomplete="off"><datalist id="svcL'+n+'"></datalist></div>'+
-   '<div class="f"><label>Service price (optional)</label><div class="price"><span>৳</span><input class="price-in" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>'+
+   '<div class="f"><label>Estimated price (optional)</label><div class="price"><span>৳</span><input class="price-in" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>'+
    '<div class="f ok"><label>Booking date</label><input class="date" type="date" min="'+today()+'" value="'+today()+'"></div>'+
    '<div class="f ok"><label>Booking time</label><input class="time" type="time" value="" step="60" required></div>';
   $('bks').appendChild(c);
@@ -679,7 +679,7 @@ async function enter(){
 async function logout(){window.isAdm=false;$('bkBack').dataset.go='home';if(channel){sb.removeChannel(channel);channel=null}await sb.auth.signOut();me=null;bks=[];users=[];show('home')}
 $('dashOut').addEventListener('click',logout);$('techOut').addEventListener('click',logout);
 function listen(fn){if(channel)sb.removeChannel(channel);
-  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).on('postgres_changes',{event:'*',schema:'public',table:'acc_deposits'},fn).subscribe()}
+  channel=sb.channel('bk').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},fn).on('postgres_changes',{event:'*',schema:'public',table:'acc_deposits'},fn).on('postgres_changes',{event:'*',schema:'public',table:'acc_transactions'},fn).subscribe()}
 $('anav').addEventListener('click',function(e){var b=e.target.closest('[data-p]');if(!b)return;
   if(b.dataset.p==='new'){$('bkBack').dataset.go='dash';document.querySelectorAll('#anav [data-p]').forEach(function(x){x.setAttribute('aria-pressed',x===b)});show('booking');return}
   page=b.dataset.p;show('dash');renderAdmin()});
@@ -693,7 +693,7 @@ function billSheet(b,admin,done){
   f.appendChild(el('h2','',(admin?'🧾 Bill — ':'🧾 Work & Bill — ')+b.code));
   f.appendChild(el('p','hint','Add only the services/parts actually provided. Technician cannot give discount.'));
   f.appendChild(rows);
-  function sum(){return list.reduce(function(t,x){return t+(+x.a||0)},0)}
+  function sum(){return list.reduce(function(t,x){return t+(+x.a||0)*(+x.qty||1)},0)}
   function upd(){tot.textContent='Total ৳ '+Math.max(0,sum()-disc).toLocaleString('en-US')}
   function draw(){
     rows.innerHTML='';
@@ -701,7 +701,7 @@ function billSheet(b,admin,done){
       var w=el('div','sf'),nI=document.createElement('input'),aI=document.createElement('input'),qI=document.createElement('input'),rm=el('button','sb','Remove');
       nI.placeholder='Service / part / work item';nI.value=x.n;nI.oninput=function(){x.n=nI.value};
       qI.type='number';qI.min=1;qI.inputMode='numeric';qI.placeholder='Qty';qI.value=x.qty||1;qI.oninput=function(){x.qty=Math.max(1,+qI.value||1);upd()};
-      aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='Amount';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
+      aI.type='number';aI.min=0;aI.inputMode='decimal';aI.placeholder='Unit price ৳';aI.value=x.a;aI.style.marginTop='8px';aI.oninput=function(){x.a=+aI.value||0;upd()};
       rm.type='button';rm.style.marginTop='8px';rm.onclick=function(){if(list.length>1){list.splice(i,1);draw();upd()}};
       w.appendChild(nI);w.appendChild(qI);w.appendChild(aI);if(list.length>1)w.appendChild(rm);rows.appendChild(w)
     })
@@ -709,7 +709,7 @@ function billSheet(b,admin,done){
   draw();
   var add=el('button','btn ghost','+ Add service / part');add.type='button';add.onclick=function(){list.push({n:'',a:0,qty:1});draw();upd()};f.appendChild(add);
 
-  var pm=accSel(['Cash','Bank','Mobile banking']);pm.value=b.pay_mode==='online'?'Mobile banking':(b.pay_mode||'Cash');
+  var pm=accSel(['Cash','Bank','Mobile banking']);var pmv=lc(b.pay_mode);pm.value=pmv==='bank'?'Bank':(pmv==='online'||pmv==='mobile banking'||pmv==='bkash'||pmv==='nagad')?'Mobile banking':'Cash';
   f.appendChild(el('label','','Payment method'));f.appendChild(pm);
 
   if(admin){
@@ -734,43 +734,16 @@ function billSheet(b,admin,done){
       p_discount:admin?disc:0
     });
     if(r.error){err.textContent='Could not save bill: '+r.error.message;return}
-    var d={items:clean,price:sum(),pay_mode:pm.value,discount:admin?disc:0};
-
-    // Keep the service transaction synchronized with the latest bill.
-    var txn={
-      transaction_date:b.booking_date||today(),
-      transaction_id:'TX-'+String(b.code||b.id).replace(/[^A-Za-z0-9-]/g,''),
-      booking_id:b.id,
-      customer:b.customer||null,
-      technician_name:techName(b.tech_id),
-      direction:'IN',
-      category:'Service',
-      amount:Math.max(0,sum()-disc),
-      payment_way:pm.value,
-      way:pm.value,
-      title:(b.category||'Service')+' / '+(b.service||'Service'),
-      note:'Invoice '+(b.code||'')
-    };
-    var old=await sb.from('acc_transactions').select('id').eq('booking_id',b.id).eq('category','Service').maybeSingle();
-    var tr;
-    if(old.error){
-      tr=await sb.from('acc_transactions').insert(txn);
-    }else if(old.data){
-      tr=await sb.from('acc_transactions').update(txn).eq('id',old.data.id);
-    }else{
-      tr=await sb.from('acc_transactions').insert(txn);
-    }
-    if(tr.error && tr.error.code!=='PGRST204'){
-      console.warn('Service transaction sync failed',tr.error);
-    }
+    var d={items:clean,price:sum(),pay_mode:pm.value,discount:admin?disc:(+b.discount||0)};
+    Object.assign(b,d);
     sh.remove();if(done)done();
-    if(admin){Object.assign(b,d);if(confirm('Bill save হয়েছে। Invoice (PDF) download করবেন?'))invoice(b)}
+    if(admin){if(confirm('Bill save হয়েছে। Invoice (PDF) download করবেন?'))invoice(b)}
   };
   upd();f.appendChild(tot);f.appendChild(err);f.appendChild(sv);f.appendChild(cn);sh.appendChild(f);document.body.appendChild(sh);
 }
 
 // ================= invoice (PDF) =================
-async function invoice(b){
+async function invoice(b){if(/[^\u0000-\u00FF]/.test([b.customer,b.address,techName(b.tech_id)].concat(items(b).map(function(x){return x.n})).join('')))return invoicePrint(b);
   var J=window.jspdf;if(!J){alert('PDF library did not load. Check your internet.');return}
   var d=new J.jsPDF({unit:'mm',format:'a4'}),y=18,L=16,R=194,W=178;
   var mint=[64,176,151], dark=[12,41,37], grey=[95,115,110];
@@ -803,8 +776,8 @@ async function invoice(b){
     if(y>255){d.addPage();y=20}
     var q=+x.qty||1, ls=d.splitTextToSize(String(x.n||'Service'),112);
     d.text(ls,L+2,y);
-    d.text(String(q),145,y,{align:'right'});
-    d.text('Tk '+Math.round(+x.a||0).toLocaleString('en-US'),R-4,y,{align:'right'});
+    d.text(q+' x '+Math.round(+x.a||0),145,y,{align:'right'});
+    d.text('Tk '+Math.round((+x.a||0)*q).toLocaleString('en-US'),R-4,y,{align:'right'});
     y+=Math.max(6,4.5*ls.length);
     d.setDrawColor(220);d.line(L,y-2,R,y-2);d.setDrawColor(150);
   });
@@ -868,7 +841,7 @@ function inTab(b,t){
   if(t==='done')return b.status==='confirmed'&&b.work_status==='complete';
   if(t==='cancelled')return b.status==='cancelled';
 }
-function techName(id){var u=users.filter(function(x){return x.id===id})[0];return u?((u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)):'—'}
+function techName(id){var u=users.filter(function(x){return x.id===id})[0];if(!u&&me&&me.id===id)u=me;return u?((u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)):'—'}
 function card(b){
   var c=el('div','bc'),r=el('div','rw');
   r.appendChild(el('b','',b.code));
@@ -900,7 +873,7 @@ function renderNav(){
   var set=function(id,n){var e=$(id);e.textContent=n;e.hidden=!n};
   set('bd-dash',bks.filter(function(b){return inTab(b,'new')}).length);
   set('bd-tech',users.filter(function(u){return u.role==='pending'}).length);
-  set('bd-txn',accTxns.length);
+  set('bd-txn',accDeps.filter(function(d){return d.status==='pending'}).length);
 }
 var svcRows=[],svcErr='',svcOpen={};
 function buildCat(rows){var c={};rows.forEach(function(r){c[r.category]=c[r.category]||{};(c[r.category][r.sub]=c[r.category][r.sub]||[]).push(r.name)});return c}
@@ -989,14 +962,14 @@ function renderCompletedJobs(L){
     left.appendChild(idline);
     left.appendChild(el('div','job-tech','👨‍🔧 '+techName(b.tech_id)));
     left.appendChild(el('div','job-service','🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')));
-    var it=items(b).map(function(x){return x.n+' — '+tk(x.a)}).join(' • ');
+    var it=items(b).map(function(x){return x.n+((+x.qty>1)?' ×'+x.qty:'')+' — '+tk((+x.a||0)*(+x.qty||1))}).join(' • ');
     left.appendChild(el('div','job-items',it||'No work items'));
     var right=el('div','job-right');
     right.appendChild(el('b','job-amount',tk(bill(b))));
     if(b.completed_at)left.appendChild(el('div','job-items','Completed: '+new Date(b.completed_at).toLocaleString('en-GB')));
     if(b.last_edited_at)left.appendChild(el('div','job-items','Last edit: '+new Date(b.last_edited_at).toLocaleString('en-GB')+' · ID: '+(b.last_edited_by||'—')));
     right.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer','done')}));
-    right.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));
+    right.appendChild(el('span','chip st',(b.pay_mode==='online'?'Online':(b.pay_mode||'Cash'))));
     var ac=el('div','row-actions');
     ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
     ac.appendChild(btn('Edit','',function(){billSheet(b,true,loadAdmin)}));
@@ -1146,7 +1119,7 @@ function renderTeam(L){
   });
 }
 $('csv').addEventListener('click',function(){
-  var q=function(v,p){var s=String(v==null?'':v).replace(/"/g,'""');if(p)s='="'+s+'"';else s='"'+s+'"';return s};
+  var q=function(v,p){var s=String(v==null?'':v).replace(/"/g,'""');if(!p&&/^[=+\-@]/.test(s))s="'"+s;if(p)s='="'+s+'"';else s='"'+s+'"';return s};
   var out=['Code,Customer,Phone,Address,Category,Sub category,Service,Price,Discount,Bill,Booking Date,Booking Time,Technician Visit Date,Technician Visit Time,Technician,Status,Work status,Work items'];
   bks.forEach(function(b){out.push([q(b.code),q(b.customer),q(b.phone,1),q(b.address),q(b.category),q(b.sub),q(b.service),base(b),+b.discount||0,bill(b),q(b.booking_date),q(b.booking_time),q(b.technician_visit_date||b.booking_date),q(b.technician_visit_time||b.booking_time),q(techName(b.tech_id)),q(b.status),q(WORK[b.work_status]),q(items(b).map(function(x){return x.n+' '+x.a}).join('; '))].join(','))});
   var blob=new Blob(['\ufeff'+out.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
@@ -1168,7 +1141,7 @@ var SENT={};try{SENT=JSON.parse(localStorage.getItem('hf_sent')||'{}')}catch(e){
 function markSent(id,k){SENT[id+':'+k]=1;try{localStorage.setItem('hf_sent',JSON.stringify(SENT))}catch(e){}}
 function jobMsg(b,t,d,tm,who,ex,kind){
   var svc=[b.category,b.sub,b.service].filter(Boolean).join(' / ');
-  var its=(b.items&&b.items.length)?b.items.map(function(x){return '• '+x.n+' — ৳ '+(+x.a||0)}).join('\n'):'';
+  var its=(b.items&&b.items.length)?b.items.map(function(x){return '• '+x.n+((+x.qty>1)?' ×'+x.qty:'')+' — ৳ '+((+x.a||0)*(+x.qty||1))}).join('\n'):'';
   var tn=t?(t.name||t.email):'—',tid=(t&&t.tech_code)||'—',tp=(t&&t.phone)||'—',code=vcode(b),when=bnDate(b.technician_visit_date||d)+', '+slotText(b.technician_visit_time||tm),L;
   if(who==='tech'){
     L=['HomeFix — নতুন কাজ','','Booking ID: '+b.code,'Service: '+svc];if(its)L.push(its);
@@ -1354,7 +1327,7 @@ function tk(n){return '৳ '+Math.round(n||0).toLocaleString('en-US')}
 function sumOf(a,f){return a.reduce(function(t,x){return t+(+f(x)||0)},0)}
 function accDone(a){return a.filter(function(b){return b.status==='confirmed'&&b.work_status==='complete'})}
 function accInD(d){d=String(d||'').slice(0,10);var t=today();return accRange==='today'?d===t:accRange==='month'?d.slice(0,7)===t.slice(0,7):true}
-function accColl(b){return b.pay_mode==='online'?0:bill(b)}
+function accColl(b){var m=lc(b.pay_mode);return (!m||m==='cash')?bill(b):0}
 function accBal(jobs,deps){
   return sumOf(jobs,accColl)
    -sumOf(deps.filter(function(d){return d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount})
@@ -1789,7 +1762,7 @@ body::before{
     f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.visitDate);f.appendChild(fields.visitTime);f.appendChild(fields.price);f.appendChild(fields.discount);
     var ac=el('div','acts');
     ac.appendChild(btn('Save','pri',async function(){
-      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+      if(!okPhone(inputs.phone.value)){alert('Phone সঠিক নয় (01XXXXXXXXX)');return}var d={customer:inputs.customer.value.trim(),phone:normPhone(inputs.phone.value),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
       var r=await sb.from('bookings').update(d).eq('id',b.id);
       if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
     }));
@@ -1827,7 +1800,7 @@ body::before{
     T.parentNode.insertBefore(tiles,T);
 
     var controls=el('div','smart-filter');
-    [['new','🆕 New'],['working','🔧 Working'],['notyet','⏳ Not yet'],['all','All']].forEach(function(x){
+    [['new','🆕 New'],['working','🔧 Working'],['notyet','⏳ Not yet'],['cancelled','❌ Cancelled'],['all','All']].forEach(function(x){
       var b=el('button',tab===x[0]?'on':'',x[1]);b.type='button';b.onclick=function(){tab=x[0];drawDash()};controls.appendChild(b);
     });
     T.parentNode.insertBefore(controls,T);
@@ -1842,7 +1815,7 @@ body::before{
       if(tab==='new')return b.status==='pending';
       if(tab==='working')return b.status==='confirmed'&&b.work_status==='working';
       if(tab==='notyet')return b.status==='confirmed'&&(/^not_(yet|started)$/.test(b.work_status||'')||!b.work_status);
-      if(tab==='active')return b.status==='confirmed'&&b.work_status!=='complete';
+      if(tab==='cancelled')return b.status==='cancelled';if(tab==='active')return b.status==='confirmed'&&b.work_status!=='complete';
       return true;
     });
     if(tab==='all')rows=rows.filter(function(b){return b.status!=='cancelled'});
@@ -1854,13 +1827,13 @@ body::before{
       c.appendChild(el('div','meta','👨‍🔧 '+techName(b.tech_id)+' · 🛠 '+[b.category,b.sub,b.service].filter(Boolean).join(' / ')+' · 💰 '+tk(bill(b))));
       c.appendChild(el('div','meta','Status: '+(b.work_status||b.status||'—')+' · '+(b.booking_time||'')));
       var ac=el('div','smart-actions');
-      ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));
+      ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));if(b.status==='cancelled'){ac.appendChild(btn('Reopen','primary',function(){upd(b.id,{status:'pending'})}));ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+' permanently?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}))}
       if(b.status==='pending'){
         var ts=techSelect(b);c.appendChild(ts);
-        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
+        ac.appendChild(btn('Cancel','',function(){if(confirm('Cancel '+b.code+'?'))upd(b.id,{status:'cancelled'})}));ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
         ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
       }else if(b.status==='confirmed'){
-        ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
+        var ts2=techSelect(b);c.appendChild(ts2);ac.appendChild(btn('Reassign','',function(){if(!ts2._s.value){alert('Select a technician');return}assignFlow(b,ts2._s.value,ts2._date.value,ts2._time.value)}));ac.appendChild(btn('Cancel','',function(){if(confirm('Cancel '+b.code+'?'))upd(b.id,{status:'cancelled'})}));ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
         ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer')}));
         ac.appendChild(btn('Not yet','',function(){setWorkStatus(b,'not_yet',loadAdmin,'admin')}));
         ac.appendChild(btn('Bill','primary',function(){billSheet(b,true,loadAdmin)}));
@@ -2098,12 +2071,12 @@ function pretty(d){try{return new Date(d+'T00:00:00').toLocaleDateString('en-GB'
 function entries(){
   var done=accDone(bks),ids={},E=[];done.forEach(function(b){ids[b.id]=1});
   (Array.isArray(accTxns)?accTxns:[]).forEach(function(t){
-    if(t.category==='Service'&&t.booking_id&&ids[t.booking_id])return;
+    if(t.category==='Service'&&t.booking_id)return;
     E.push({k:'manual',t:t,date:dOnly(t.transaction_date||t.created_at),dir:t.direction==='OUT'?'OUT':'IN',amt:Math.abs(+t.amount||0),type:t.category==='Parts'?'Parts':t.category==='Other'?'Other':'Service',
       title:t.title||t.part_name||t.category||'Entry',sub:[t.customer,t.technician_name,t.note].filter(Boolean).join(' · '),way:t.payment_way||t.way||''});
   });
   done.forEach(function(b){E.push({k:'job',b:b,date:dOnly(b.booking_date),dir:'IN',amt:bill(b),type:'Service',
-    title:b.code+' · '+(b.service||b.category||'Service'),sub:[b.customer,techName(b.tech_id)].filter(Boolean).join(' · '),way:b.pay_mode==='online'?'Online':'Cash'})});
+    title:b.code+' · '+(b.service||b.category||'Service'),sub:[b.customer,techName(b.tech_id)].filter(Boolean).join(' · '),way:(b.pay_mode==='online'?'Online':(b.pay_mode||'Cash'))})});
   accDeps.filter(function(d){return d.status==='confirmed'}).forEach(function(d){E.push({k:'dep',d:d,date:dOnly(d.created_at),dir:'DEP',amt:+d.amount||0,type:'Deposit',
     title:(d.kind==='payout'?'Company paid ':'Deposit from ')+techName(d.technician_id),sub:[d.method,d.trx_id?'Trx '+d.trx_id:''].filter(Boolean).join(' · '),way:d.method||''})});
   return E.sort(function(a,b){return b.date.localeCompare(a.date)});
@@ -2161,7 +2134,7 @@ function addPanel(L){
   f.date=document.createElement('input');f.date.type='date';f.date.value=today();box.appendChild(f.date);
   var ac=el('div','acts');ac.appendChild(btn('Save','pri',function(){saveEntry(f)}));box.appendChild(ac);L.appendChild(box);
 }
-function csv(v){var q=function(x){return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'};
+function csv(v){var q=function(x){var s=String(x==null?'':x).replace(/"/g,'""');if(/^[=+@]/.test(s))s="'"+s;return '"'+s+'"'};
   var rows=[['Date','Type','Title','Details','Direction','Amount','Method']].concat(v.map(function(e){return [e.date,e.type,e.title,e.sub,e.dir,e.amt,e.way]}));
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+rows.map(function(r){return r.map(q).join(',')}).join('\n')],{type:'text/csv'}));
   a.download='HomeFix-transactions-'+today()+'.csv';document.body.appendChild(a);a.click();a.remove()}
@@ -2210,6 +2183,37 @@ window.renderTransactions=function(L){
 };
 var ra2=window.renderAdmin;
 window.renderAdmin=function(){if(page!=='txn'){Q='';OPEN=false}return ra2.apply(this,arguments)};
+})();
+</script>
+<style id="homefix-fixes">
+body{font-family:Montserrat,'Hind Siliguri',system-ui,sans-serif!important}
+.logo{color:#f5fbf9!important;text-shadow:none!important}.logo svg{color:#8ed7c8!important}
+.tag{color:#d8f4ed!important}.sub,.hint,.msg{color:#b7cdc7!important}.msg.bad,.err{color:#ff9d98!important}
+.btn,.opt.primary{color:#06231d!important}
+.btn.ghost{background:#17312d!important;color:#e6f4f0!important;border-color:#46665f!important}
+.anav button{font-size:10px!important}
+.chip,.mini-badge,.job-date,.job-items,.job-tech,.job-service,.tx-tag,.tile span,.who,.sb,.row-actions .sb,.bc p{font-size:11px!important}
+.sb,.row-actions .sb{font-size:12px!important}
+</style>
+<script id="homefix-fixes-js">
+(function(){
+var _s=window.show,skip=false;
+history.replaceState({v:'home'},'');
+window.show=function(v){_s(v);if(!skip&&(history.state||{}).v!==v)history.pushState({v:v},'')};
+window.addEventListener('popstate',function(e){
+  var v=(e.state||{}).v||'home',adm=me&&me.role==='admin',tech=me&&me.role==='technician';
+  if(!me&&(v==='dash'||v==='tjobs'))v='home';
+  if(me&&(v==='login'||v==='create'||v==='home'))v=adm?'dash':tech?'tjobs':v;
+  if(adm&&v==='tjobs')v='dash';if(tech&&v!=='tjobs')v='tjobs';
+  skip=true;_s(v);skip=false;if(v==='dash'&&adm)renderAdmin();
+});
+window.invoicePrint=function(b){
+  var E=function(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+  var rows=items(b).map(function(x){var q=+x.qty||1;return '<tr><td>'+E(x.n)+'</td><td class=r>'+q+' × '+Math.round(+x.a||0)+'</td><td class=r>৳ '+Math.round((+x.a||0)*q).toLocaleString('en-US')+'</td></tr>'}).join('');
+  var w=window.open('','_blank');if(!w){alert('Pop-up allow করে আবার চাপুন।');return}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>HomeFix-Invoice-'+E(b.code)+'</title><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:"Hind Siliguri",Arial,sans-serif;margin:28px;color:#12221f}.h{background:#0c2925;color:#fff;padding:16px;border-radius:8px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.r{text-align:right}.t{font-size:18px;font-weight:700}</style></head><body><div class="h"><b>HomeFix</b><span>INVOICE · '+E(b.code)+'</span></div><p><b>'+E(b.customer)+'</b><br>'+E(b.phone)+'<br>'+E(b.address)+'</p><p>Date: '+E(b.booking_date)+' · Technician: '+E(techName(b.tech_id))+' · Payment: '+E(b.pay_mode||'Cash')+'</p><table><tr><th>Service / Item</th><th class="r">Qty × Price</th><th class="r">Amount</th></tr>'+rows+'</table><p class="r">Subtotal: ৳ '+Math.round(base(b)).toLocaleString('en-US')+(+b.discount?'<br>Discount: − ৳ '+Math.round(+b.discount):'')+'</p><p class="r t">TOTAL: ৳ '+Math.round(bill(b)).toLocaleString('en-US')+'</p><p>Thank you for choosing HomeFix.</p></body></html>');
+  w.document.close();setTimeout(function(){w.focus();w.print()},900);
+};
 })();
 </script>
 </body>
