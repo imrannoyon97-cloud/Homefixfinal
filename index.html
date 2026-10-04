@@ -1818,7 +1818,7 @@ body::before{
       ac.appendChild(btn('Edit','',function(){smartEditBooking(b)}));
       if(b.status==='pending'){
         var ts=techSelect(b);c.appendChild(ts);
-        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}assignFlow(b,ts._s.value)}));
+        ac.appendChild(btn('Assign & save','primary',function(){if(!ts._s.value){alert('Select a technician');return}assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
         ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
       }else if(b.status==='confirmed'){
         ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
