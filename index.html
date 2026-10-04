@@ -885,7 +885,7 @@ function techSelect(b){
   users.filter(function(u){return u.role==='technician'}).forEach(function(u){var o=el('option','',(u.tech_code?u.tech_code+' · ':'')+(u.name||u.email)+(u.phone?' — '+u.phone:''));o.value=u.id;if(u.id===b.tech_id)o.selected=true;s.appendChild(o)});
   w.appendChild(s);w._s=s;
   var dl=el('label','','Technician visit date');var di=dateInput(b.technician_visit_date||b.booking_date||today());w.appendChild(dl);w.appendChild(di);w._date=di;
-  var tl=el('label','','Technician visit time');var ti=slotSelect(b.technician_visit_time||b.booking_time);w.appendChild(tl);w.appendChild(ti);w._time=ti;
+  var tl=el('label','','Technician visit time');var ti=document.createElement('input');ti.type='time';ti.step='60';ti.value=hm(b.technician_visit_time||b.booking_time)||'11:00';w.appendChild(tl);w.appendChild(ti);w._time=ti;
   return w;
 }
 async function upd(id,d){d=Object.assign({},d,{last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null});if(d.work_status==='complete'){d.completed_at=new Date().toISOString();d.completed_by=(me&&me.id)||null}var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
@@ -1233,10 +1233,26 @@ async function assignFlow(b,techId,visitDate,visitTime){
   if(b.booking_date&&visitDate<b.booking_date){$('dashNote').textContent='Technician visit date booking date-এর আগে হতে পারবে না।';return false}
   if(b.booking_date&&visitDate===b.booking_date&&b.booking_time&&hm(visitTime)<hm(b.booking_time)){$('dashNote').textContent='একই দিনে technician visit time booking time-এর আগে হতে পারবে না।';return false}
   $('dashNote').textContent='Saving technician schedule…';
-  var d={status:'confirmed',tech_id:techId,technician_visit_date:visitDate,technician_visit_time:visitTime,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
-  var r=await sb.from('bookings').update(d).eq('id',b.id).select('*').maybeSingle();
-  if(r.error){$('dashNote').textContent='Could not save technician schedule: '+r.error.message;return false}
-  b.status='confirmed';b.tech_id=techId;b.technician_visit_date=visitDate;b.technician_visit_time=visitTime;
+  if(!sb){$('dashNote').textContent='Database connection নেই.';return false}
+
+  // IMPORTANT: use the secure Supabase RPC instead of direct table UPDATE.
+  // This bypasses strict bookings UPDATE RLS while still checking admin role in SQL.
+  var r=await sb.rpc('admin_assign_booking',{
+    p_booking_id:b.id,
+    p_tech_id:techId,
+    p_visit_date:visitDate,
+    p_visit_time:visitTime
+  });
+  if(r.error){
+    $('dashNote').textContent='Could not save technician schedule: '+r.error.message;
+    console.error('admin_assign_booking:',r.error);
+    return false;
+  }
+  var saved=r.data||{};
+  b.status='confirmed';
+  b.tech_id=techId;
+  b.technician_visit_date=saved.technician_visit_date||visitDate;
+  b.technician_visit_time=saved.technician_visit_time||visitTime;
   $('dashNote').textContent='Technician date & time saved successfully.';
   sendSheet(b,techId);
   await loadAdmin();
