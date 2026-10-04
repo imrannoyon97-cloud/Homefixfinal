@@ -1244,18 +1244,32 @@ async function setWorkStatus(b,newStatus,done,source){
   var msg=source==='admin'?'dashNote':'tNote';
   if($(msg))$(msg).textContent='Saving work status…';
   if(!sb){if($(msg))$(msg).textContent='Database connection নেই.';return false}
-  var r=await sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:newStatus});
-  if(r.error){
-    console.error('homefix_set_work_status RPC failed:',r.error);
-    // Admin fallback: try the normal table update if the RPC is unavailable.
-    if(source==='admin'){
-      var d={work_status:newStatus,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
-      if(newStatus==='complete'){d.completed_at=new Date().toISOString();d.completed_by=(me&&me.id)||null}
-      else {d.completed_at=null;d.completed_by=null}
-      r=await sb.from('bookings').update(d).eq('id',b.id);
+  // Save directly to bookings first. The old RPC used an ON CONFLICT clause
+  // that does not match a unique/exclusion constraint in the current database,
+  // which caused: "there is no unique or exclusion constraint matching...".
+  // Both admin and technician use the same safe update path now.
+  var d={work_status:newStatus,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+  if(newStatus==='complete'){
+    d.completed_at=new Date().toISOString();
+    d.completed_by=(me&&me.id)||null;
+  }else{
+    d.completed_at=null;
+    d.completed_by=null;
+  }
+  var r=await sb.from('bookings').update(d).eq('id',b.id).select('*').maybeSingle();
+
+  // If RLS blocks the direct update, try the RPC as a secondary path.
+  if(r.error || !r.data){
+    console.warn('Direct work-status update failed; trying RPC:',r.error||'No row updated');
+    var rpc=await sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:newStatus});
+    if(!rpc.error){
+      r={error:null,data:rpc.data||{id:b.id,work_status:newStatus}};
+    }else{
+      r={error:rpc.error,data:null};
     }
   }
   if(r.error){
+    console.error('work status save failed:',r.error);
     if($(msg))$(msg).textContent='Could not update status: '+r.error.message;
     alert('Status save হয়নি: '+r.error.message);
     return false;
