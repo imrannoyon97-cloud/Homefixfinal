@@ -1232,6 +1232,40 @@ function sendSheet(b,techId,toWho,kind0){
   ac.appendChild(btn('Close','',close));
   f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)close()};document.body.appendChild(sh);
 }
+async function setWorkStatus(b,newStatus,done,source){
+  source=source||'admin';
+  if(!b||!b.id){alert('Booking ID পাওয়া যায়নি।');return false}
+  if(newStatus==='complete' && !(b.items&&b.items.length)){
+    billSheet(b,source==='admin',async function(){
+      await setWorkStatus(b,'complete',done,source);
+    });
+    return false;
+  }
+  var msg=source==='admin'?'dashNote':'tNote';
+  if($(msg))$(msg).textContent='Saving work status…';
+  if(!sb){if($(msg))$(msg).textContent='Database connection নেই.';return false}
+  var r=await sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:newStatus});
+  if(r.error){
+    console.error('homefix_set_work_status RPC failed:',r.error);
+    // Admin fallback: try the normal table update if the RPC is unavailable.
+    if(source==='admin'){
+      var d={work_status:newStatus,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+      if(newStatus==='complete'){d.completed_at=new Date().toISOString();d.completed_by=(me&&me.id)||null}
+      else {d.completed_at=null;d.completed_by=null}
+      r=await sb.from('bookings').update(d).eq('id',b.id);
+    }
+  }
+  if(r.error){
+    if($(msg))$(msg).textContent='Could not update status: '+r.error.message;
+    alert('Status save হয়নি: '+r.error.message);
+    return false;
+  }
+  b.work_status=newStatus;
+  if($(msg))$(msg).textContent='Status saved: '+WORK[newStatus];
+  if(typeof done==='function')await done();
+  return true;
+}
+
 async function assignFlow(b,techId,visitDate,visitTime){
   if(!techId){$('dashNote').textContent='Select a technician first.';return false}
   if(!visitDate||!visitTime){$('dashNote').textContent='Technician visit date and time select করুন।';return false}
@@ -1283,21 +1317,12 @@ function renderTech(){
     var previousStatus=b.work_status||'not_yet';
     s.onchange=async function(){
       if(b.work_status==='complete'){s.value='complete';$('tNote').textContent='Complete কাজ আর edit করা যাবে না।';return}
-      if(s.value==='complete' && !(b.items&&b.items.length)){
-        s.value=previousStatus;
-        var nb=tJobs.filter(function(x){return x.id===b.id})[0];
-        if(nb)billSheet(nb,false,async function(){
-          var rr=await sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:'complete'});
-          if(rr.error){$('tNote').textContent='Could not complete work: '+rr.error.message;return}
-          await loadTech();
-        });
-        return;
-      }
-      var r=await sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:s.value});
-      if(r.error){$('tNote').textContent='Could not update status: '+r.error.message;s.value=previousStatus;return}
-      previousStatus=s.value;
-      await loadTech();
-      if(s.value==='on_the_way'){var ob=tJobs.filter(function(x){return x.id===b.id})[0];if(ob)sendSheet(ob,me.id,'customer','ontheway')}
+      var nextStatus=s.value;
+      s.value=previousStatus;
+      var ok=await setWorkStatus(b,nextStatus,loadTech,'tech');
+      if(!ok)return;
+      previousStatus=nextStatus;
+      if(nextStatus==='on_the_way'){var ob=tJobs.filter(function(x){return x.id===b.id})[0];if(ob)sendSheet(ob,me.id,'customer','ontheway')}
     };
     w.appendChild(s);c.appendChild(w);
     var ac=el('div','acts');
@@ -1823,12 +1848,12 @@ body::before{
       }else if(b.status==='confirmed'){
         ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,b.tech_id)}));
         ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer')}));
-        ac.appendChild(btn('Not yet','',function(){sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:'not_yet'}).then(function(){loadAdmin()})}));
+        ac.appendChild(btn('Not yet','',function(){setWorkStatus(b,'not_yet',loadAdmin,'admin')}));
         ac.appendChild(btn('Bill','primary',function(){billSheet(b,true,loadAdmin)}));
         ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
-        ac.appendChild(btn('On the way','',function(){sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:'on_the_way'}).then(function(){loadAdmin()})}));
-        ac.appendChild(btn('Working','primary',function(){sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:'working'}).then(function(){loadAdmin()})}));
-        ac.appendChild(btn('Complete','primary',function(){sb.rpc('homefix_set_work_status',{p_booking_id:b.id,p_work_status:'complete'}).then(function(){loadAdmin()})}));
+        ac.appendChild(btn('On the way','',function(){setWorkStatus(b,'on_the_way',loadAdmin,'admin')}));
+        ac.appendChild(btn('Working','primary',function(){setWorkStatus(b,'working',loadAdmin,'admin')}));
+        ac.appendChild(btn('Complete','primary',function(){setWorkStatus(b,'complete',loadAdmin,'admin')}));
         ac.appendChild(btn('Delete','danger',async function(){if(!confirm('Delete '+b.code+'?'))return;var r=await sb.from('bookings').delete().eq('id',b.id);if(r.error)alert(r.error.message);else loadAdmin()}));
       }
       c.appendChild(ac);L.appendChild(c);
