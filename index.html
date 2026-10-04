@@ -2448,6 +2448,29 @@ function pdfReport(m){
   w.document.write(h);w.document.close();setTimeout(function(){w.focus();w.print()},900)}
 
 /* ---------- blocks ---------- */
+function money(){
+  var jobs=accDone(bks).filter(function(b){return inR(dOnly(b.booking_date))});
+  var expected=sumOf(jobs,bill);
+  var direct=sumOf(jobs.filter(function(b){var m=lc(b.pay_mode);return m&&m!=='cash'}),bill);
+  var tdep=sumOf(accDeps.filter(function(d){return d.status==='confirmed'&&d.kind==='joma'&&inR(dOnly(d.confirmed_at||d.created_at))}),function(d){return d.amount});
+  var pend=sumOf(accDeps.filter(function(d){return d.status==='pending'&&d.kind==='joma'}),function(d){return d.amount});
+  var man=(Array.isArray(accTxns)?accTxns:[]).filter(function(t){return t.status!=='cancelled'&&!(t.category==='Service'&&t.booking_id)&&inR(dOnly(t.transaction_date||t.created_at))});
+  var outs=man.filter(function(t){return t.direction==='OUT'}),exp=sumOf(outs,function(t){return Math.abs(+t.amount||0)});
+  var parts=sumOf(outs.filter(function(t){return (t.expense_type||t.category)==='Parts'}),function(t){return Math.abs(+t.amount||0)});
+  var oin=sumOf(man.filter(function(t){return t.direction!=='OUT'}),function(t){return Math.abs(+t.amount||0)});
+  var tr=techRows(),due=0,dueN=0;tr.forEach(function(r){if(Math.round(r.bal)>0){due+=r.bal;dueN++}});
+  var rec=tdep+direct;
+  return {expected:expected,jobs:jobs.length,direct:direct,tdep:tdep,rec:rec,pend:pend,exp:exp,parts:parts,oin:oin,due:due,dueN:dueN,bal:rec+oin-exp};
+}
+function drawCards(box){
+  var m=money();box.innerHTML='';
+  function card(cls,icon,name,val,sub,span){var c=el('div','t3-mc '+cls+(span?' wide':''));c.appendChild(el('small','',icon+' '+name));c.appendChild(el('b','',val));(sub||[]).forEach(function(x){if(x)c.appendChild(el('em','',x))});box.appendChild(c)}
+  card('rc','💵','RECEIVED',tk(m.rec),['Technician জমা '+tk(m.tdep)+(m.direct?' · সরাসরি (Bank/bKash) '+tk(m.direct):''),m.pend?'⏳ '+tk(m.pend)+' confirm বাকি':'']);
+  card('ex','📥','EXPECTED',tk(m.expected),[m.jobs+'টি কাজ Complete']);
+  card('du','👨‍🔧','TECH DUE',tk(m.due),[m.dueN?m.dueN+' জনের কাছে জমা বাকি (মোট)':'সবাই জমা দিয়েছে ✓']);
+  card('xp','💸','EXPENSE',tk(m.exp),['Parts '+tk(m.parts)+' · অন্যান্য '+tk(m.exp-m.parts)]);
+  card('bl '+(m.bal<0?'neg':''),'💰','BALANCE',sgn(m.bal),['Received − Expense'+(m.oin?' (+ অন্য আয় '+tk(m.oin)+')':'')],true);
+}
 function pendingBox(L){
   var p=accDeps.filter(function(d){return d.status==='pending'});if(!p.length)return;
   var h=el('div','section-head');h.appendChild(el('h2','','Deposit confirm করুন'));h.appendChild(el('span','mini-badge',p.length+' pending'));L.appendChild(h);
@@ -2460,7 +2483,7 @@ function pendingBox(L){
 function balBox(L){
   var B=balances(),tot=0,list=['Cash','bKash','Bank'];if(B.Nagad)list.splice(2,0,'Nagad');
   WAYS.forEach(function(w){tot+=B[w]});
-  var g=el('div','t3-bal'),ic={Cash:'💵',bKash:'📱',Nagad:'📲',Bank:'🏦'};
+  L.appendChild(el('p','hint','🏧 হাতে আছে — মাধ্যম অনুযায়ী (সব সময়ের)'));var g=el('div','t3-bal'),ic={Cash:'💵',bKash:'📱',Nagad:'📲',Bank:'🏦'};
   list.forEach(function(w){var b=el('button',S.method===w?'on':'');b.type='button';b.appendChild(el('small','',ic[w]+' '+w));
     var x=el('b',B[w]<0?'tx-out':'',sgn(B[w]));b.appendChild(x);b.onclick=function(){S.method=S.method===w?'all':w;renderAdmin()};g.appendChild(b)});
   L.appendChild(g);
@@ -2468,14 +2491,22 @@ function balBox(L){
   L.appendChild(el('p','hint','কোম্পানির হাতে মোট '+sgn(tot)+' · Technician-দের কাছে পাব '+tk(owed)+(S.method!=='all'?' · ফিল্টার: '+S.method+' (আবার চাপলে সব)':'')));
 }
 function dueBox(L){
-  var rows=techRows().filter(function(r){return Math.round(r.bal)!==0}).sort(function(a,b){return b.bal-a.bal});if(!rows.length)return;
-  var h=el('div','section-head');h.appendChild(el('h2','','💰 পেতে হবে / দিতে হবে'));L.appendChild(h);
+  var rows=techRows().map(function(r){var jobs=accDone(bks).filter(function(j){return j.tech_id===r.u.id});
+    r.comp=sumOf(jobs,accColl);r.dep=sumOf(accDeps.filter(function(d){return d.technician_id===r.u.id&&d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount});return r})
+    .filter(function(r){return r.comp>0||r.dep>0||Math.round(r.bal)!==0}).sort(function(a,b){return b.bal-a.bal});
+  if(!rows.length)return;
+  var h=el('div','section-head');h.appendChild(el('h2','','👨‍🔧 Technician Deposit Due'));L.appendChild(h);
+  L.appendChild(el('p','hint','Complete হয়েছে কিন্তু technician এখনও যে টাকা জমা দেয়নি (Due = Complete − জমা)।'));
   rows.forEach(function(r){var owes=r.bal>0,c=el('div','tx-row'),top=el('div','tx-top');top.style.cursor='default';
     var l=el('div');l.appendChild(el('div','t',(r.u.tech_code?r.u.tech_code+' · ':'')+(r.u.name||r.u.email)));
-    l.appendChild(el('small','',owes?'কোম্পানিকে জমা দিতে হবে':'কোম্পানি technician-কে দেবে'));
+    l.appendChild(el('small','','Complete '+tk(r.comp)+' · জমা '+tk(r.dep)));
     if(r.pend)l.appendChild(el('small','','⏳ '+tk(r.pend)+' pending confirm'));
-    top.appendChild(l);var a=el('div','tx-amt '+(owes?'tx-in':'tx-out'),tk(Math.abs(r.bal)));top.appendChild(a);c.appendChild(top);
-    var ac=el('div','acts');ac.appendChild(btn(owes?'টাকা পেয়েছি ✓':'টাকা দিয়েছি ✓','pri',function(){settle(r.u,r.bal,!owes)}));c.appendChild(ac);L.appendChild(c)});
+    if(r.bal<0)l.appendChild(el('small','','কোম্পানি technician-কে দেবে'));
+    top.appendChild(l);top.appendChild(el('div','tx-amt '+(r.bal>0?'t3-dueamt':r.bal<0?'tx-out':'tx-in'),Math.round(r.bal)===0?'৳ 0 ✓':'Due '+tk(Math.abs(r.bal))));c.appendChild(top);
+    if(Math.round(r.bal)!==0){var ac=el('div','acts');ac.appendChild(btn(owes?'টাকা পেয়েছি ✓':'টাকা দিয়েছি ✓','pri',function(){settle(r.u,r.bal,!owes)}));c.appendChild(ac)}
+    L.appendChild(c)});
+  var tt=techRows().reduce(function(t,r){return t+(r.bal>0?r.bal:0)},0);
+  L.appendChild(el('p','hint','মোট Technician Deposit Due = '+tk(tt)));
 }
 function quickBox(L){
   var w=el('div','t3-qa');
@@ -2542,11 +2573,12 @@ function logPanel(P){
 
 /* ---------- main ---------- */
 window.renderTransactions=function(L){
-  loadCloses();pendingBox(L);balBox(L);dueBox(L);quickBox(L);
+  loadCloses();
   L.appendChild(chipsRow([['today','Today'],['week','7 days'],['month','This month'],['custom','📅 তারিখ'],['all','All']],S.range,function(x){S.range=x}));
   if(S.range==='custom'){var dr=el('div','t3-dr');dr.appendChild(inp('date','',S.from,function(x){S.from=x;draw()}));dr.appendChild(el('span','','–'));dr.appendChild(inp('date','',S.to,function(x){S.to=x;draw()}));L.appendChild(dr)}
-  var sum=el('div','tx-sum'),cs=[['আয়','tx-in'],['খরচ','tx-out'],['নেট','']].map(function(x){var c=el('div','tx-card'),b=el('b',x[1],'');c.appendChild(el('small','',x[0]));c.appendChild(b);sum.appendChild(c);return b});
-  L.appendChild(sum);var info=el('p','hint','');L.appendChild(info);
+  var cardsEl=el('div','t3-money');L.appendChild(cardsEl);
+  var info=el('p','hint','');L.appendChild(info);
+  pendingBox(L);dueBox(L);balBox(L);quickBox(L);
   var tl=el('div','t3-tools');[['close','🧮 Day close'],['charts','📊 চার্ট'],['report','📄 রিপোর্ট'],['log','📜 লগ']].forEach(function(x){
     var b=el('button',S.tool===x[0]?'on':'',x[1]);b.type='button';b.onclick=function(){S.tool=S.tool===x[0]?'':x[0];if(S.tool==='log'){S.audit=undefined;S.auditLoad=false}renderAdmin()};tl.appendChild(b)});
   L.appendChild(tl);
@@ -2574,8 +2606,8 @@ window.renderTransactions=function(L){
     r.appendChild(ac);top.onclick=function(){ac.hidden=!ac.hidden};return r}
   function draw(){
     var v=vis(),t=totals(v);
-    cs[0].textContent=tk(t.i);cs[1].textContent=tk(t.o);cs[2].textContent=sgn(t.n);cs[2].className=t.n<0?'tx-out':'tx-in';
-    info.textContent='Technician থেকে জমা পাওয়া '+tk(t.d)+(S.tech!=='all'||S.type!=='all'||S.method!=='all'?' · ফিল্টার চালু আছে':'');
+    drawCards(cardsEl);
+    info.textContent='তালিকায় '+v.filter(function(e){return !e.canc}).length+'টি entry'+(S.tech!=='all'||S.type!=='all'||S.method!=='all'?' · ফিল্টার চালু আছে':'');
     panel.innerHTML='';if(S.tool==='close')closePanel(panel);else if(S.tool==='charts')chartPanel(panel,v);else if(S.tool==='report')reportPanel(panel);else if(S.tool==='log')logPanel(panel);
     list.innerHTML='';var live=v.filter(function(e){return !e.canc}),dead=v.filter(function(e){return e.canc});
     if(!live.length)list.appendChild(el('p','hint','এই সময়ে কোনো entry নেই। উপরে "This month" বা "All" চাপুন।'));
@@ -2594,6 +2626,18 @@ window.renderAdmin=function(){if(page!=='txn'){S.q='';S.qa=null;S.f={};S.tool=''
 })();
 </script>
 <style id="homefix-txn-v3-css">
+.t3-money{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.t3-mc{border:1.5px solid rgba(255,255,255,.14);border-radius:16px;padding:12px;background:rgba(255,255,255,.04)}
+.t3-mc.wide{grid-column:1/-1;text-align:center}
+.t3-mc small{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
+.t3-mc b{display:block;font-size:22px;margin:4px 0 2px}
+.t3-mc em{display:block;font-style:normal;font-size:11px;opacity:.75;margin-top:2px}
+.t3-mc.rc{border-color:#5fd7a8}.t3-mc.rc b{color:#5fd7a8}
+.t3-mc.ex{border-color:#79adff}.t3-mc.ex b{color:#79adff}
+.t3-mc.du{border-color:#ffcf4d}.t3-mc.du b{color:#ffcf4d}
+.t3-mc.xp{border-color:#ff8f87}.t3-mc.xp b{color:#ff8f87}
+.t3-mc.bl{border-width:2px;border-color:#5fd7a8}.t3-mc.bl b{font-size:28px;color:#5fd7a8}.t3-mc.bl.neg{border-color:#ff8f87}.t3-mc.bl.neg b{color:#ff8f87}
+.t3-dueamt{color:#ffcf4d}
 .t3-bal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px}
 .t3-bal button{font:inherit;text-align:left;color:inherit;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);border-radius:14px;padding:10px 12px;cursor:pointer}
 .t3-bal button.on{border-color:#5fd7a8;background:rgba(95,215,168,.12)}
