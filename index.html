@@ -1415,7 +1415,7 @@ function renderTechAcc(L){
   var bal=accBal(all,accDeps),pend=sumOf(accDeps.filter(function(d){return d.kind==='joma'&&d.status==='pending'}),function(d){return d.amount});
   var box=el('div');box.appendChild(el('h2','','My income'));box.appendChild(accTabs(renderTech));
   box.appendChild(accSum([['Jobs done',String(jobs.length)],['Cash collected',tk(sumOf(jobs,accColl))],
-    [bal>=0?'I must deposit (Due)':'Company owes me',tk(Math.abs(bal)),bal>0?'var(--err)':null]]));
+    [bal>=0?'I must deposit (Due)':'Extra deposit',tk(Math.abs(bal)),bal>0?'var(--err)':null]]));
   if(pend)box.appendChild(el('p','hint','Waiting for admin to confirm: '+tk(pend)));
   var f=el('div','bc'),amt=accField('input','Amount deposited','number'),m=accSel(['bKash','Nagad','Cash']),t=accField('input','Transaction ID');
   amt.inputMode='numeric';f.appendChild(amt);f.appendChild(m);f.appendChild(t);
@@ -1897,7 +1897,7 @@ function area(v){var t=document.createElement('textarea');t.rows=2;t.value=v||''
 function shrink(f){return new Promise(function(ok,no){var r=new FileReader();r.onerror=no;r.onload=function(){var im=new Image();im.onerror=no;im.onload=function(){var k=Math.min(1,256/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',.72))};im.src=r.result};r.readAsDataURL(f)})}
 function avatar(u,z){var d=el('div','');d.style.cssText='width:'+z+'px;height:'+z+'px;border-radius:50%;overflow:hidden;flex:none;background:#26413c;display:flex;align-items:center;justify-content:center;font-weight:700';
   if(u.photo){var i=document.createElement('img');i.src=u.photo;i.alt='';i.style.cssText='width:100%;height:100%;object-fit:cover';d.appendChild(i)}else d.textContent=String(u.name||u.email||'?').trim().charAt(0).toUpperCase();return d}
-var FIELDS=[['name','Full name','text'],['phone','Phone 1','tel'],['phone2','Phone 2','tel'],['nid','NID number','text'],['present_address','Present address','area'],['permanent_address','Permanent address','area'],['dob','Date of birth','date'],['blood_group','Blood group','text'],['emergency_contact','Emergency contact (name & phone)','text'],['speciality','Speciality','text'],['joining_date','Joining date','date'],['base_salary','Base salary','number'],['overtime','Overtime','number'],['bonus','Bonus','number'],['advance','Advance','number'],['adjustment','Adjustment','number'],['notes','Notes','area']];
+var FIELDS=[['name','Full name','text'],['phone','Phone 1','tel'],['phone2','Phone 2','tel'],['nid','NID number','text'],['present_address','Present address','area'],['permanent_address','Permanent address','area'],['dob','Date of birth','date'],['blood_group','Blood group','text'],['emergency_contact','Emergency contact (name & phone)','text'],['speciality','Speciality','text'],['skills','Skills (কমা দিয়ে লিখুন, যেমন: AC, Fridge, Wiring)','area'],['joining_date','Joining date','date'],['base_salary','Base salary','number'],['overtime','Overtime','number'],['bonus','Bonus','number'],['advance','Advance','number'],['adjustment','Adjustment','number'],['notes','Notes','area']];
 var NUM={base_salary:1,overtime:1,bonus:1,advance:1,adjustment:1},DT={dob:1,joining_date:1};
 function techSheet(u){
   var add=!u;u=u||{};var sh=el('div','sheet'),f=el('form'),photo=u.photo||'',F={};
@@ -2493,7 +2493,7 @@ function balBox(L){
 function dueBox(L){
   var rows=techRows().map(function(r){var jobs=accDone(bks).filter(function(j){return j.tech_id===r.u.id});
     r.comp=sumOf(jobs,accColl);r.dep=sumOf(accDeps.filter(function(d){return d.technician_id===r.u.id&&d.kind==='joma'&&d.status==='confirmed'}),function(d){return d.amount});return r})
-    .filter(function(r){return r.comp>0||r.dep>0||Math.round(r.bal)!==0}).sort(function(a,b){return b.bal-a.bal});
+    .filter(function(r){return Math.round(r.bal)>0}).sort(function(a,b){return b.bal-a.bal});
   if(!rows.length)return;
   var h=el('div','section-head');h.appendChild(el('h2','','👨‍🔧 Technician Deposit Due'));L.appendChild(h);
   L.appendChild(el('p','hint','Complete হয়েছে কিন্তু technician এখনও যে টাকা জমা দেয়নি (Due = Complete − জমা)।'));
@@ -2501,7 +2501,6 @@ function dueBox(L){
     var l=el('div');l.appendChild(el('div','t',(r.u.tech_code?r.u.tech_code+' · ':'')+(r.u.name||r.u.email)));
     l.appendChild(el('small','','Complete '+tk(r.comp)+' · জমা '+tk(r.dep)));
     if(r.pend)l.appendChild(el('small','','⏳ '+tk(r.pend)+' pending confirm'));
-    if(r.bal<0)l.appendChild(el('small','','কোম্পানি technician-কে দেবে'));
     top.appendChild(l);top.appendChild(el('div','tx-amt '+(r.bal>0?'t3-dueamt':r.bal<0?'tx-out':'tx-in'),Math.round(r.bal)===0?'৳ 0 ✓':'Due '+tk(Math.abs(r.bal))));c.appendChild(top);
     if(Math.round(r.bal)!==0){var ac=el('div','acts');ac.appendChild(btn(owes?'টাকা পেয়েছি ✓':'টাকা দিয়েছি ✓','pri',function(){settle(r.u,r.bal,!owes)}));c.appendChild(ac)}
     L.appendChild(c)});
@@ -2804,29 +2803,30 @@ function tWork(L){
   });
 }
 function tProf(L){
-  function lab(t){var l=el('label','',t);l.style.marginTop='10px';return l}
-  var f=el('div','bc'),r=el('div','rw');r.appendChild(el('b','',(me.tech_code?me.tech_code+' · ':'')+(me.name||me.email)));r.appendChild(el('span','chip ok','Technician'));f.appendChild(r);
-  f.appendChild(el('p','',me.email||''));
-  var nm=accField('input','Full name'),ph=accField('input','01XXXXXXXXX','tel'),m1=el('p','hint','');nm.value=me.name||'';ph.value=me.phone||'';
-  [lab('Full name'),nm,lab('Phone'),ph,m1].forEach(function(x){f.appendChild(x)});
-  var a1=el('div','acts');a1.appendChild(btn('Save information','pri',async function(){
-    var n=nm.value.trim(),p=ph.value.trim();if(!n){m1.textContent='Name দিন।';return}
-    if(p&&!okPhone(p)){m1.textContent='Phone সঠিক নয় (01XXXXXXXXX)।';return}
-    var x=await sb.from('profiles').update({name:n,phone:p?normPhone(p):null}).eq('id',me.id);
-    if(x.error){m1.textContent='Save হয়নি: '+x.error.message;return}
-    me.name=n;me.phone=p?normPhone(p):null;$('techWho').textContent='Logged in as '+(me.tech_code?me.tech_code+' · ':'')+n;m1.textContent='Saved ✓';
-  }));f.appendChild(a1);L.appendChild(f);
-  var g=el('div','bc');g.appendChild(el('b','','Change password'));
-  var p1=accField('input','New password (min 8)','password'),p2=accField('input','Confirm new password','password'),m2=el('p','hint','');p1.autocomplete=p2.autocomplete='new-password';
-  [p1,p2,m2].forEach(function(x){g.appendChild(x)});
-  var a2=el('div','acts');a2.appendChild(btn('Update password','pri',async function(){
-    if(p1.value.length<8){m2.textContent='কমপক্ষে ৮ অক্ষর দিন।';return}
-    if(p1.value!==p2.value){m2.textContent='Password দুটো মিলছে না।';return}
-    var x=await sb.auth.updateUser({password:p1.value});if(x.error){m2.textContent='Update হয়নি: '+x.error.message;return}
-    p1.value=p2.value='';m2.textContent='Password বদলানো হয়েছে ✓';
-  }));g.appendChild(a2);L.appendChild(g);
+  var u=me||{};
+  function row(k,v){var r=el('div','salary-row');r.appendChild(el('span','',k));var b=el('b','',v==null||v===''?'—':String(v));b.style.cssText='text-align:right;max-width:62%;white-space:pre-wrap';r.appendChild(b);return r}
+  var f=el('div','bc'),h=el('div','');h.style.cssText='display:flex;gap:12px;align-items:center';
+  var av=el('div','');av.style.cssText='width:72px;height:72px;border-radius:50%;overflow:hidden;flex:none;background:#26413c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px';
+  if(u.photo){var im=document.createElement('img');im.src=u.photo;im.alt='';im.style.cssText='width:100%;height:100%;object-fit:cover';av.appendChild(im)}else av.textContent=String(u.name||u.email||'?').trim().charAt(0).toUpperCase();
+  var nm=el('div','');nm.appendChild(el('b','',u.name||u.email||''));nm.appendChild(el('div','hint',(u.tech_code||'')+(u.speciality?' · '+u.speciality:'')));
+  h.appendChild(av);h.appendChild(nm);f.appendChild(h);L.appendChild(f);
+  var d=el('div','salary-box');d.style.margin='10px 0';
+  [['Technician ID',u.tech_code],['Email',u.email],['Phone 1',u.phone],['Phone 2',u.phone2],['NID',u.nid],['Present address',u.present_address],['Permanent address',u.permanent_address],['Date of birth',u.dob],['Blood group',u.blood_group],['Emergency contact',u.emergency_contact],['Speciality',u.speciality],['Joining date',u.joining_date]].forEach(function(x){d.appendChild(row(x[0],x[1]))});
+  L.appendChild(d);
+  var sk=String(u.skills||'').split(/[,\n]+/).map(function(x){return x.trim()}).filter(Boolean);
+  var sb2=el('div','bc');sb2.appendChild(el('b','','Skills'));
+  if(!sk.length)sb2.appendChild(el('p','hint','Admin এখনও skills যোগ করেননি।'));
+  else{var w=el('div','');w.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-top:8px';sk.forEach(function(x){var c=el('span','chip ok',x);w.appendChild(c)});sb2.appendChild(w)}
+  L.appendChild(sb2);
+  var base=+u.base_salary||0,net=base+(+u.overtime||0)+(+u.bonus||0)-(+u.advance||0)+(+u.adjustment||0);
+  var sal=el('div','salary-box');sal.style.margin='10px 0';
+  [['Base salary',tk(base)],['Overtime',tk(+u.overtime||0)],['Bonus',tk(+u.bonus||0)],['Advance',tk(+u.advance||0)],['Adjustment',tk(+u.adjustment||0)]].forEach(function(x){sal.appendChild(row(x[0],x[1]))});
+  var t=row('Net estimate',tk(net));t.className='salary-row total';sal.appendChild(t);L.appendChild(sal);
   var o=el('div','bc'),a3=el('div','acts');a3.appendChild(btn('⎋ Log out','del',function(){if(confirm('Log out করবেন?'))logout()}));o.appendChild(a3);L.appendChild(o);
 }
+/* profile খুললে সবসময় সর্বশেষ details আনবে */
+var _lt=window.loadTech;
+window.loadTech=async function(){try{var r=await sb.from('profiles').select('*').eq('id',me.id).maybeSingle();if(r.data)Object.assign(me,r.data)}catch(e){}return _lt.apply(this,arguments)};
 window.renderTech=function(){
   var L=$('tlist');L.innerHTML='';
   nav.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.t===tTab)});
