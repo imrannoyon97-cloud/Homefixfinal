@@ -725,7 +725,8 @@ function billSheet(b,admin,done){
     if(list.some(function(x){return !String(x.n).trim()})){err.textContent='Every service/work item needs a name.';return}
     if(disc>sum()){err.textContent='Discount cannot be more than the subtotal.';return}
     var clean=list.map(function(x){return {n:String(x.n).trim(),a:+x.a||0,qty:+x.qty||1}});
-    var d={items:clean,price:sum(),pay_mode:pm.value};
+    if(!admin && b.work_status==='complete'){err.textContent='কাজ Complete হওয়ার পর Technician আর bill edit করতে পারবেন না।';return}
+    var d={items:clean,price:sum(),pay_mode:pm.value,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
     if(admin)d.discount=disc;
     var r=await sb.from('bookings').update(d).eq('id',b.id);
     if(r.error){err.textContent='Could not save bill: '+r.error.message;return}
@@ -887,7 +888,7 @@ function techSelect(b){
   var tl=el('label','','Technician visit time');var ti=slotSelect(b.technician_visit_time||b.booking_time);w.appendChild(tl);w.appendChild(ti);w._time=ti;
   return w;
 }
-async function upd(id,d){var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
+async function upd(id,d){d=Object.assign({},d,{last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null});if(d.work_status==='complete'){d.completed_at=new Date().toISOString();d.completed_by=(me&&me.id)||null}var r=await sb.from('bookings').update(d).eq('id',id);if(r.error)$('dashNote').textContent='Could not save: '+r.error.message;else await loadAdmin()}
 function btn(txt,cls,fn){var x=el('button','sb'+(cls?' '+cls:''),txt);x.type='button';x.onclick=fn;return x}
 function renderNav(){
   document.querySelectorAll('#anav [data-p]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.p===page)});
@@ -987,6 +988,8 @@ function renderCompletedJobs(L){
     left.appendChild(el('div','job-items',it||'No work items'));
     var right=el('div','job-right');
     right.appendChild(el('b','job-amount',tk(bill(b))));
+    if(b.completed_at)left.appendChild(el('div','job-items','Completed: '+new Date(b.completed_at).toLocaleString('en-GB')));
+    if(b.last_edited_at)left.appendChild(el('div','job-items','Last edit: '+new Date(b.last_edited_at).toLocaleString('en-GB')+' · ID: '+(b.last_edited_by||'—')));
     right.appendChild(btn('📨 Customer','',function(){sendSheet(b,b.tech_id,'customer','done')}));
     right.appendChild(el('span','chip st',b.pay_mode==='online'?'Online':'Cash'));
     var ac=el('div','row-actions');
@@ -1105,7 +1108,7 @@ function renderAdmin(){
       ac.appendChild(btn('Cancel','del',function(){upd(b.id,{status:'cancelled'})}));
     }else if(b.status==='confirmed'){
       ts=techSelect(b);c.appendChild(ts);
-      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)upd(b.id,{tech_id:ts._s.value,technician_visit_date:ts._date.value,technician_visit_time:ts._time.value})}));
+      ac.appendChild(btn('Reassign','',function(){if(ts._s.value)assignFlow(b,ts._s.value,ts._date.value,ts._time.value)}));
       ac.appendChild(btn('📨 Send details','',function(){sendSheet(b,ts._s.value||b.tech_id)}));
       ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,ts._s.value||b.tech_id,'customer')}));
       ac.appendChild(btn('Bill','pri',function(){billSheet(b,true,loadAdmin)}));
@@ -1225,13 +1228,19 @@ function sendSheet(b,techId,toWho,kind0){
   f.appendChild(ac);sh.appendChild(f);sh.onclick=function(e){if(e.target===sh)close()};document.body.appendChild(sh);
 }
 async function assignFlow(b,techId,visitDate,visitTime){
-  if(!techId){$('dashNote').textContent='Select a technician first.';return}
-  if(!visitDate||!visitTime){$('dashNote').textContent='Technician visit date and time select করুন।';return}
-  if(b.booking_date&&visitDate<b.booking_date){$('dashNote').textContent='Technician visit date booking date-এর আগে হতে পারবে না।';return}
-  if(b.booking_date&&visitDate===b.booking_date&&b.booking_time&&hm(visitTime)<hm(b.booking_time)){$('dashNote').textContent='একই দিনে technician visit time booking time-এর আগে হতে পারবে না।';return}
-  var r=await sb.from('bookings').update({status:'confirmed',tech_id:techId,technician_visit_date:visitDate,technician_visit_time:visitTime}).eq('id',b.id);
-  if(r.error){$('dashNote').textContent='Could not save: '+r.error.message;return}
-  b.status='confirmed';b.tech_id=techId;b.technician_visit_date=visitDate;b.technician_visit_time=visitTime;sendSheet(b,techId);
+  if(!techId){$('dashNote').textContent='Select a technician first.';return false}
+  if(!visitDate||!visitTime){$('dashNote').textContent='Technician visit date and time select করুন।';return false}
+  if(b.booking_date&&visitDate<b.booking_date){$('dashNote').textContent='Technician visit date booking date-এর আগে হতে পারবে না।';return false}
+  if(b.booking_date&&visitDate===b.booking_date&&b.booking_time&&hm(visitTime)<hm(b.booking_time)){$('dashNote').textContent='একই দিনে technician visit time booking time-এর আগে হতে পারবে না।';return false}
+  $('dashNote').textContent='Saving technician schedule…';
+  var d={status:'confirmed',tech_id:techId,technician_visit_date:visitDate,technician_visit_time:visitTime,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+  var r=await sb.from('bookings').update(d).eq('id',b.id).select('*').maybeSingle();
+  if(r.error){$('dashNote').textContent='Could not save technician schedule: '+r.error.message;return false}
+  b.status='confirmed';b.tech_id=techId;b.technician_visit_date=visitDate;b.technician_visit_time=visitTime;
+  $('dashNote').textContent='Technician date & time saved successfully.';
+  sendSheet(b,techId);
+  await loadAdmin();
+  return true;
 }
 
 // ================= technician =================
@@ -1250,16 +1259,31 @@ function renderTech(){
   rows.forEach(function(b){
     var c=card(b);c.appendChild(el('p','hint','Technician visit: '+bnDate(b.technician_visit_date||b.booking_date)+' · '+slotText(b.technician_visit_time||b.booking_time)));var w=el('div','sel'),s=document.createElement('select');w.appendChild(el('label','','Work status'));
     Object.keys(WORK).forEach(function(k){var o=el('option','',WORK[k]);o.value=k;if(k===b.work_status)o.selected=true;s.appendChild(o)});
+    var previousStatus=b.work_status||'not_yet';
     s.onchange=async function(){
-      var r=await sb.from('bookings').update({work_status:s.value}).eq('id',b.id);
-      if(r.error){$('tNote').textContent='Could not update status.';return}
+      if(b.work_status==='complete'){s.value='complete';$('tNote').textContent='Complete কাজ আর edit করা যাবে না।';return}
+      if(s.value==='complete' && !(b.items&&b.items.length)){
+        s.value=previousStatus;
+        var nb=tJobs.filter(function(x){return x.id===b.id})[0];
+        if(nb)billSheet(nb,false,async function(){
+          var rr=await sb.from('bookings').update({work_status:'complete',completed_at:new Date().toISOString(),completed_by:(me&&me.id)||null,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null}).eq('id',b.id);
+          if(rr.error){$('tNote').textContent='Could not complete work: '+rr.error.message;return}
+          await loadTech();
+        });
+        return;
+      }
+      var patch={work_status:s.value,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
+      if(s.value==='complete'){patch.completed_at=new Date().toISOString();patch.completed_by=(me&&me.id)||null}
+      var r=await sb.from('bookings').update(patch).eq('id',b.id);
+      if(r.error){$('tNote').textContent='Could not update status: '+r.error.message;s.value=previousStatus;return}
+      previousStatus=s.value;
       await loadTech();
-      if(s.value==='complete'&&!(b.items&&b.items.length)){var nb=tJobs.filter(function(x){return x.id===b.id})[0];if(nb)billSheet(nb,false,loadTech)}
       if(s.value==='on_the_way'){var ob=tJobs.filter(function(x){return x.id===b.id})[0];if(ob)sendSheet(ob,me.id,'customer','ontheway')}
     };
     w.appendChild(s);c.appendChild(w);
     var ac=el('div','acts');
-    ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
+    if(b.work_status!=='complete')ac.appendChild(btn((b.items&&b.items.length)?'Edit work & bill':'Add work & bill','pri',function(){billSheet(b,false,loadTech)}));
+    else ac.appendChild(btn('Bill locked','',function(){alert('কাজ Complete হয়েছে। Technician bill আর edit করতে পারবেন না।')}));
     ac.appendChild(btn('📨 Customer','',function(){sendSheet(b,me.id,'customer')}));
     ac.appendChild(btn('🧾 Invoice','invoice-action',function(){invoice(b)}));
     c.appendChild(ac);L.appendChild(c);
@@ -1707,7 +1731,7 @@ body::before{
     f.appendChild(fields.date);f.appendChild(fields.time);f.appendChild(fields.visitDate);f.appendChild(fields.visitTime);f.appendChild(fields.price);f.appendChild(fields.discount);
     var ac=el('div','acts');
     ac.appendChild(btn('Save','pri',async function(){
-      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0};
+      var d={customer:inputs.customer.value.trim(),phone:inputs.phone.value.trim(),address:inputs.address.value.trim(),category:inputs.category.value.trim(),sub:inputs.sub.value.trim(),service:inputs.service.value.trim(),booking_date:fields.date.value,booking_time:fields.time.value,technician_visit_date:fields.visitDate.value,technician_visit_time:fields.visitTime.value,price:+fields.price.value||0,discount:+fields.discount.value||0,last_edited_at:new Date().toISOString(),last_edited_by:(me&&me.id)||null};
       var r=await sb.from('bookings').update(d).eq('id',b.id);
       if(r.error){alert(r.error.message);return}sh.remove();loadAdmin();
     }));
