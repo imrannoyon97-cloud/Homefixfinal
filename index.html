@@ -2213,7 +2213,60 @@ window.invoicePrint=function(b){
   var E=function(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var rows=items(b).map(function(x){var q=+x.qty||1;return '<tr><td>'+E(x.n)+'</td><td class=r>'+q+' × '+Math.round(+x.a||0)+'</td><td class=r>৳ '+Math.round((+x.a||0)*q).toLocaleString('en-US')+'</td></tr>'}).join('');
   var w=window.open('','_blank');if(!w){alert('Pop-up allow করে আবার চাপুন।');return}
-  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>HomeFix-Invoice-'+E(b.code)+'</title><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:"Hind Siliguri",Arial,sans-serif;margin:28px;color:#12221f}.h{background:#0c2925;color:#fff;padding:16px;border-radius:8px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.r{text-align:right}.t{font-size:18px;font-weight:700}</style></head><body><div class="h"><b>HomeFix</b><span>INVOICE · '+E(b.code)+'</span></div><p><b>'+E(b.customer)+'</b><br>'+E(b.phone)+'<br>'+E(b.address)+'</p><p>Date: '+E(b.booking_date)+' · Technician: '+E(techName(b.tech_id))+' · Payment: '+E(b.pay_mode||'Cash')+'</p><table><tr><th>Service / Item</th><th class="r">Qty × Price</th><th class="r">Amount</th></tr>'+rows+'</table><p class="r">Subtotal: ৳ '+Math.round(base(b)).toLocaleString('en-US')+(+b.discount?'<br>Discount: − ৳ '+Math.round(+b.discount):'')+'</p><p class="r t">TOTAL: ৳ '+Math.round(bill(b)).toLocaleString('en-US')+'</p><p>Thank you for choosing HomeFix.</p><script id="homefix-txn-v3">
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>HomeFix-Invoice-'+E(b.code)+'</title><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:"Hind Siliguri",Arial,sans-serif;margin:28px;color:#12221f}.h{background:#0c2925;color:#fff;padding:16px;border-radius:8px;display:flex;justify-content:space-between}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.r{text-align:right}.t{font-size:18px;font-weight:700}</style></head><body><div class="h"><b>HomeFix</b><span>INVOICE · '+E(b.code)+'</span></div><p><b>'+E(b.customer)+'</b><br>'+E(b.phone)+'<br>'+E(b.address)+'</p><p>Date: '+E(b.booking_date)+' · Technician: '+E(techName(b.tech_id))+' · Payment: '+E(b.pay_mode||'Cash')+'</p><table><tr><th>Service / Item</th><th class="r">Qty × Price</th><th class="r">Amount</th></tr>'+rows+'</table><p class="r">Subtotal: ৳ '+Math.round(base(b)).toLocaleString('en-US')+(+b.discount?'<br>Discount: − ৳ '+Math.round(+b.discount):'')+'</p><p class="r t">TOTAL: ৳ '+Math.round(bill(b)).toLocaleString('en-US')+'</p><p>Thank you for choosing HomeFix.</p></body></html>');
+  w.document.close();setTimeout(function(){w.focus();w.print()},900);
+};
+/* ===== Admin section: profile, password, logout ===== */
+var AB=el('button','back','👤 Admin');AB.type='button';AB.id='adminBtn';
+$('dashTitle').parentNode.insertBefore(AB,$('dashTitle'));
+var admDone=false;
+AB.onclick=function(){page='admin';admDone=false;renderAdmin()};
+var _ra=window.renderAdmin;
+window.renderAdmin=function(){
+  if(page!=='admin'){admDone=false;return _ra.apply(this,arguments)}
+  if(admDone)return;admDone=true;
+  var T=$('tabs'),L=$('list');T.innerHTML='';L.innerHTML='';
+  document.querySelectorAll('.tiles,.completed-link,.smart-filter,.new-alert').forEach(function(x){x.remove()});
+  $('dashTitle').textContent='Admin';$('csv').style.display='none';renderNav();
+  var c=el('div','bc'),r=el('div','rw');
+  r.appendChild(el('b','',me.name||me.email));r.appendChild(el('span','chip ok','Admin'));c.appendChild(r);
+  c.appendChild(el('p','',me.email||''));L.appendChild(c);
+  function lab(t){var l=el('label','',t);l.style.marginTop='10px';return l}
+  var f=el('div','bc');f.appendChild(el('b','','Admin information'));
+  var nm=accField('input','Full name'),ph=accField('input','01XXXXXXXXX','tel'),m1=el('p','hint','');
+  nm.value=me.name||'';ph.value=me.phone||'';
+  [lab('Full name'),nm,lab('Phone'),ph,m1].forEach(function(x){f.appendChild(x)});
+  var a1=el('div','acts');
+  a1.appendChild(btn('Save information','pri',async function(){
+    var n=nm.value.trim(),p=ph.value.trim();
+    if(!n){m1.textContent='Name দিন।';return}
+    if(p&&!okPhone(p)){m1.textContent='Phone সঠিক নয় (01XXXXXXXXX)।';return}
+    var x=await sb.from('profiles').update({name:n,phone:p?normPhone(p):null}).eq('id',me.id);
+    if(x.error){m1.textContent='Save হয়নি: '+x.error.message;return}
+    me.name=n;me.phone=p?normPhone(p):null;$('dashWho').textContent='Logged in as '+n+' (admin)';m1.textContent='Saved ✓';
+  }));
+  f.appendChild(a1);L.appendChild(f);
+  var g=el('div','bc');g.appendChild(el('b','','Change password'));
+  var p1=accField('input','New password (min 8)','password'),p2=accField('input','Confirm new password','password'),m2=el('p','hint','');
+  p1.autocomplete=p2.autocomplete='new-password';
+  [p1,p2,m2].forEach(function(x){g.appendChild(x)});
+  var a2=el('div','acts');
+  a2.appendChild(btn('Update password','pri',async function(){
+    if(p1.value.length<8){m2.textContent='কমপক্ষে ৮ অক্ষর দিন।';return}
+    if(p1.value!==p2.value){m2.textContent='Password দুটো মিলছে না।';return}
+    var x=await sb.auth.updateUser({password:p1.value});
+    if(x.error){m2.textContent='Update হয়নি: '+x.error.message;return}
+    p1.value=p2.value='';m2.textContent='Password বদলানো হয়েছে ✓';
+  }));
+  g.appendChild(a2);L.appendChild(g);
+  var o=el('div','bc'),a3=el('div','acts');
+  a3.appendChild(btn('⎋ Log out','del',function(){if(confirm('Log out করবেন?'))logout()}));
+  o.appendChild(a3);L.appendChild(o);
+};
+
+})();
+</script>
+<script id="homefix-txn-v3">
 /* ===== Transactions v3: আজকের হিসাব (balances, dues, quick add, day close, charts, report, audit) ===== */
 (function(){
 var S={range:'today',from:'',to:'',method:'all',tech:'all',type:'all',q:'',qa:null,f:{},tool:'',canc:false,
@@ -2391,51 +2444,7 @@ function pdfReport(m){
   var bk=Object.keys(by).sort(function(a,b){return by[b]-by[a]});
   if(bk.length)h+='<h3>খরচের ধরন</h3><table>'+bk.map(function(k){return '<tr><td>'+esc(k)+'</td><td class="r">'+n(by[k])+'</td><td class="r">'+Math.round(by[k]/(t.o||1)*100)+'%</td></tr>'}).join('')+'</table>';
   h+='<h3>সব লেনদেন ('+v.length+')</h3><table><tr><th>তারিখ</th><th>বিবরণ</th><th>মাধ্যম</th><th class="r">টাকা</th></tr>'+v.slice().reverse().map(function(e){
-    return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.title)+(e.sub?'<br><small>'+esc(e.sub)+'</small>':'')+'</td><td>'+esc(e.way)+'</td><td class="r '+(e.dir==='IN'?'in':e.dir==='OUT'?'out':'')+'">'+(e.dir==='OUT'?'− ':e.dir==='IN'?'+ ':'')+n(e.amt)+'</td></tr>'}).join('')+'</table><script id="homefix-status-colors">
-/* ===== কাজের অবস্থার রঙ: Not yet 🔴 · On the way 🔵 · Working 🟡 · Complete 🟢 ===== */
-(function(){
-function key(b){
-  if(!b||b.status!=='confirmed')return '';
-  var w=b.work_status||'not_yet';
-  if(w==='complete')return 'green';
-  if(w==='working')return 'yellow';
-  if(w==='on_the_way')return 'blue';
-  return 'red';
-}
-var _card=window.card;
-window.card=function(b){
-  var c=_card(b),k=key(b);
-  if(k){c.classList.add('s-'+k);var ch=c.querySelector('.chip');if(ch)ch.classList.add('s-'+k)}
-  return c;
-};
-var _ra=window.renderAdmin;
-window.renderAdmin=function(){
-  var r=_ra.apply(this,arguments);
-  try{document.querySelectorAll('.smart-work').forEach(function(n){
-    var t=n.querySelector('.top b'),code=t?String(t.textContent).split(' · ')[0]:'';
-    var b=bks.filter(function(x){return x.code===code})[0],k=key(b);if(!k)return;
-    ['red','yellow','green','blue'].forEach(function(x){n.classList.remove('s-'+x)});n.classList.add('s-'+k);
-    n.querySelectorAll('.meta').forEach(function(m){if(/^Status:/.test(m.textContent)){
-      m.textContent='● '+WORK[b.work_status||'not_yet']+' · '+(b.booking_time||'');m.className='meta s-txt s-'+k}})
-  })}catch(e){}
-  return r;
-};
-})();
-</script>
-<style id="homefix-status-colors-css">
-.bc.s-red,.smart-work.s-red{border-left:7px solid #e5484d!important}
-.bc.s-blue,.smart-work.s-blue{border-left:7px solid #3b82f6!important}
-.bc.s-yellow,.smart-work.s-yellow{border-left:7px solid #f5b301!important}
-.bc.s-green,.smart-work.s-green{border-left:7px solid #2fb36d!important}
-.chip.s-red{background:#e5484d!important;color:#fff!important}
-.chip.s-blue{background:#3b82f6!important;color:#fff!important}
-.chip.s-yellow{background:#f5b301!important;color:#2a2000!important}
-.chip.s-green{background:#2fb36d!important;color:#04210f!important}
-.meta.s-txt{font-weight:700}
-.meta.s-red{color:#ff7a7f!important}.meta.s-blue{color:#79adff!important}.meta.s-yellow{color:#ffcf4d!important}.meta.s-green{color:#5fd7a8!important}
-</style>
-
-</body></html>';
+    return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.title)+(e.sub?'<br><small>'+esc(e.sub)+'</small>':'')+'</td><td>'+esc(e.way)+'</td><td class="r '+(e.dir==='IN'?'in':e.dir==='OUT'?'out':'')+'">'+(e.dir==='OUT'?'− ':e.dir==='IN'?'+ ':'')+n(e.amt)+'</td></tr>'}).join('')+'</table></body></html>';
   w.document.write(h);w.document.close();setTimeout(function(){w.focus();w.print()},900)}
 
 /* ---------- blocks ---------- */
@@ -2611,58 +2620,49 @@ window.renderAdmin=function(){if(page!=='txn'){S.q='';S.qa=null;S.f={};S.tool=''
 .t3-toast button{font:inherit;font-weight:700;background:#5fd7a8;color:#06231d;border:0;border-radius:9px;padding:6px 10px}
 </style>
 
-</body></html>');
-  w.document.close();setTimeout(function(){w.focus();w.print()},900);
+<script id="homefix-status-colors">
+/* ===== কাজের অবস্থার রঙ: Not yet 🔴 · On the way 🔵 · Working 🟡 · Complete 🟢 ===== */
+(function(){
+function key(b){
+  if(!b||b.status!=='confirmed')return '';
+  var w=b.work_status||'not_yet';
+  if(w==='complete')return 'green';
+  if(w==='working')return 'yellow';
+  if(w==='on_the_way')return 'blue';
+  return 'red';
+}
+var _card=window.card;
+window.card=function(b){
+  var c=_card(b),k=key(b);
+  if(k){c.classList.add('s-'+k);var ch=c.querySelector('.chip');if(ch)ch.classList.add('s-'+k)}
+  return c;
 };
-/* ===== Admin section: profile, password, logout ===== */
-var AB=el('button','back','👤 Admin');AB.type='button';AB.id='adminBtn';
-$('dashTitle').parentNode.insertBefore(AB,$('dashTitle'));
-var admDone=false;
-AB.onclick=function(){page='admin';admDone=false;renderAdmin()};
 var _ra=window.renderAdmin;
 window.renderAdmin=function(){
-  if(page!=='admin'){admDone=false;return _ra.apply(this,arguments)}
-  if(admDone)return;admDone=true;
-  var T=$('tabs'),L=$('list');T.innerHTML='';L.innerHTML='';
-  document.querySelectorAll('.tiles,.completed-link,.smart-filter,.new-alert').forEach(function(x){x.remove()});
-  $('dashTitle').textContent='Admin';$('csv').style.display='none';renderNav();
-  var c=el('div','bc'),r=el('div','rw');
-  r.appendChild(el('b','',me.name||me.email));r.appendChild(el('span','chip ok','Admin'));c.appendChild(r);
-  c.appendChild(el('p','',me.email||''));L.appendChild(c);
-  function lab(t){var l=el('label','',t);l.style.marginTop='10px';return l}
-  var f=el('div','bc');f.appendChild(el('b','','Admin information'));
-  var nm=accField('input','Full name'),ph=accField('input','01XXXXXXXXX','tel'),m1=el('p','hint','');
-  nm.value=me.name||'';ph.value=me.phone||'';
-  [lab('Full name'),nm,lab('Phone'),ph,m1].forEach(function(x){f.appendChild(x)});
-  var a1=el('div','acts');
-  a1.appendChild(btn('Save information','pri',async function(){
-    var n=nm.value.trim(),p=ph.value.trim();
-    if(!n){m1.textContent='Name দিন।';return}
-    if(p&&!okPhone(p)){m1.textContent='Phone সঠিক নয় (01XXXXXXXXX)।';return}
-    var x=await sb.from('profiles').update({name:n,phone:p?normPhone(p):null}).eq('id',me.id);
-    if(x.error){m1.textContent='Save হয়নি: '+x.error.message;return}
-    me.name=n;me.phone=p?normPhone(p):null;$('dashWho').textContent='Logged in as '+n+' (admin)';m1.textContent='Saved ✓';
-  }));
-  f.appendChild(a1);L.appendChild(f);
-  var g=el('div','bc');g.appendChild(el('b','','Change password'));
-  var p1=accField('input','New password (min 8)','password'),p2=accField('input','Confirm new password','password'),m2=el('p','hint','');
-  p1.autocomplete=p2.autocomplete='new-password';
-  [p1,p2,m2].forEach(function(x){g.appendChild(x)});
-  var a2=el('div','acts');
-  a2.appendChild(btn('Update password','pri',async function(){
-    if(p1.value.length<8){m2.textContent='কমপক্ষে ৮ অক্ষর দিন।';return}
-    if(p1.value!==p2.value){m2.textContent='Password দুটো মিলছে না।';return}
-    var x=await sb.auth.updateUser({password:p1.value});
-    if(x.error){m2.textContent='Update হয়নি: '+x.error.message;return}
-    p1.value=p2.value='';m2.textContent='Password বদলানো হয়েছে ✓';
-  }));
-  g.appendChild(a2);L.appendChild(g);
-  var o=el('div','bc'),a3=el('div','acts');
-  a3.appendChild(btn('⎋ Log out','del',function(){if(confirm('Log out করবেন?'))logout()}));
-  o.appendChild(a3);L.appendChild(o);
+  var r=_ra.apply(this,arguments);
+  try{document.querySelectorAll('.smart-work').forEach(function(n){
+    var t=n.querySelector('.top b'),code=t?String(t.textContent).split(' · ')[0]:'';
+    var b=bks.filter(function(x){return x.code===code})[0],k=key(b);if(!k)return;
+    ['red','yellow','green','blue'].forEach(function(x){n.classList.remove('s-'+x)});n.classList.add('s-'+k);
+    n.querySelectorAll('.meta').forEach(function(m){if(/^Status:/.test(m.textContent)){
+      m.textContent='● '+WORK[b.work_status||'not_yet']+' · '+(b.booking_time||'');m.className='meta s-txt s-'+k}})
+  })}catch(e){}
+  return r;
 };
-
 })();
 </script>
+<style id="homefix-status-colors-css">
+.bc.s-red,.smart-work.s-red{border-left:7px solid #e5484d!important}
+.bc.s-blue,.smart-work.s-blue{border-left:7px solid #3b82f6!important}
+.bc.s-yellow,.smart-work.s-yellow{border-left:7px solid #f5b301!important}
+.bc.s-green,.smart-work.s-green{border-left:7px solid #2fb36d!important}
+.chip.s-red{background:#e5484d!important;color:#fff!important}
+.chip.s-blue{background:#3b82f6!important;color:#fff!important}
+.chip.s-yellow{background:#f5b301!important;color:#2a2000!important}
+.chip.s-green{background:#2fb36d!important;color:#04210f!important}
+.meta.s-txt{font-weight:700}
+.meta.s-red{color:#ff7a7f!important}.meta.s-blue{color:#79adff!important}.meta.s-yellow{color:#ffcf4d!important}.meta.s-green{color:#5fd7a8!important}
+</style>
+
 </body>
 </html>
