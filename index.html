@@ -1925,7 +1925,7 @@ async function go(){
   if(!okPhone(p)){m.textContent='সঠিক phone number দিন (01XXXXXXXXX)।';return}
   if(!sb){m.textContent='App database-এর সাথে connected নয়।';return}
   var x=await sb.rpc('track_by_phone',{p_phone:p});
-  if(x.error){m.textContent='Track করা যায়নি: '+x.error.message;return}
+  if(x.error){m.textContent='Track করা যায়নি: '+(x.error.message||'Database function is not available. Run the HomeFix backend SQL.');return}
   var rows=x.data||[];if(!rows.length){m.textContent='এই নম্বরে কোনো booking পাওয়া যায়নি।';return}
   rows.forEach(function(r){o.appendChild(card(r))});
 }
@@ -2090,7 +2090,7 @@ window.renderTransactions=function(L){
   bar.appendChild(btn('💾 Save report','',async function(){
     var v=visible(),t=totals(v),rep={report_type:'transaction',range:R,category:T,generated_at:new Date().toISOString(),money_in:t.i,money_out:t.o,net:t.n,entry_count:v.length};
     var rr=await sb.from('report_snapshots').insert({report_type:'transaction',period:R,summary:rep,created_by:me&&me.id?me.id:null});
-    if(rr.error){alert('Report save হয়নি: '+rr.error.message);return}
+    if(rr.error){alert('Report save হয়নি: '+(rr.error.message||'report_snapshots table is not available. Run the HomeFix backend SQL.'));return}
     try{var ep=(typeof HOMEFIX_DRIVE_WEBAPP_URL!=='undefined'?HOMEFIX_DRIVE_WEBAPP_URL:'');
       if(ep){await fetch(ep,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'transaction-report',fileName:'HomeFix-Transaction-Report-'+today()+'.json',mimeType:'application/json',base64:btoa(unescape(encodeURIComponent(JSON.stringify({report:rep,entries:v},null,2))))})});alert('Report Supabase ও Google Drive-এ save হয়েছে।');return}}catch(e){}
     alert('Report Supabase-এ save হয়েছে।');
