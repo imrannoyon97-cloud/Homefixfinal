@@ -2,14 +2,20 @@
   "id": "/Homefixfinal/",
   "name": "HomeFix",
   "short_name": "HomeFix",
-  "description": "সমস্যা জানান, সমাধান আমরা করি।",
-  "start_url": "/Homefixfinal/",
-  "scope": "/Homefixfinal/",
+  "description": "ঘরের যেকোনো মেরামতের জন্য HomeFix — booking দিন, technician ট্র্যাক করুন।",
+  "lang": "bn",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0b5fff",
+  "orientation": "portrait",
+  "background_color": "#0c2925",
+  "theme_color": "#0b2723",
+  "categories": ["lifestyle", "utilities", "business"],
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
